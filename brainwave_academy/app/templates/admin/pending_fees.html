@@ -2,13 +2,8 @@
 {% block title %}Pending Fees Report{% endblock %}
 {% block content %}
 <h4 class="text-bw-teal mb-3">Pending Fees Report</h4>
-
-<ul class="nav nav-pills mb-3">
-  <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.daily_report') }}">Daily Collection</a></li>
-  <li class="nav-item"><a class="nav-link active" href="{{ url_for('admin.pending_fees_report') }}">Pending Fees</a></li>
-  <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.discount_report') }}">Discounts</a></li>
-  <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.attendance_report') }}">Attendance</a></li>
-</ul>
+{% set active = 'pending' %}
+{% include "admin/_report_nav.html" %}
 
 <form method="get" class="row g-2 mb-3">
   <div class="col-6 col-md-3">
@@ -21,12 +16,42 @@
   </div>
 </form>
 
-<div class="alert alert-danger">Total Pending: <strong>₹{{ "{:,.0f}".format(total_pending) }}</strong> across {{ students|length }} student(s)</div>
+<div class="alert alert-danger d-flex justify-content-between align-items-center flex-wrap gap-2">
+  <span>Total Pending: <strong>₹{{ "{:,.0f}".format(total_pending) }}</strong> across {{ students|length }} student(s)</span>
+  {% if students %}
+  <form method="post" action="{{ url_for('admin.send_bulk_fee_reminders') }}"
+        onsubmit="return confirm('Send a WhatsApp fee reminder (with payment link) to all {{ students|length }} parent(s) shown here?');">
+    <input type="hidden" name="class_id" value="{{ selected_class_id or '' }}">
+    <button type="submit" class="btn btn-sm btn-bw-primary"><i class="bi bi-whatsapp"></i> Send Reminders to All</button>
+  </form>
+  {% endif %}
+</div>
 
-<div class="card bw-card">
+<!-- Mobile card list -->
+<div class="d-md-none">
+  {% for s in students %}
+  <div class="card bw-card mb-2">
+    <div class="card-body py-2 px-3">
+      <div class="d-flex justify-content-between">
+        <a href="{{ url_for('admin.student_detail', student_id=s.id) }}" class="fw-bold text-decoration-none">{{ s.name }}</a>
+        <span class="text-danger fw-bold">₹{{ "{:,.0f}".format(s.pending_fee) }}</span>
+      </div>
+      <div class="small text-muted">{{ s.admission_no }} &middot; {{ s.school_class.name }}-{{ s.division.name }} &middot; {{ s.parent_whatsapp }}</div>
+      <form method="post" action="{{ url_for('admin.send_fee_reminder', student_id=s.id) }}" class="mt-2">
+        <button class="btn btn-sm btn-outline-success"><i class="bi bi-whatsapp"></i> Send Reminder</button>
+      </form>
+    </div>
+  </div>
+  {% else %}
+  <p class="text-muted">No pending fees. 🎉</p>
+  {% endfor %}
+</div>
+
+<!-- Desktop table -->
+<div class="d-none d-md-block card bw-card">
   <div class="table-responsive">
     <table class="table mb-0 align-middle">
-      <thead><tr><th>Admission No.</th><th>Name</th><th>Class</th><th>Parent WhatsApp</th><th>Total Fee</th><th>Paid</th><th>Pending</th></tr></thead>
+      <thead><tr><th>Admission No.</th><th>Name</th><th>Class</th><th>Parent WhatsApp</th><th>Total Fee</th><th>Paid</th><th>Pending</th><th></th></tr></thead>
       <tbody>
         {% for s in students %}
         <tr>
@@ -41,9 +66,14 @@
           <td>₹{{ "{:,.0f}".format(s.total_fee) }}</td>
           <td>₹{{ "{:,.0f}".format(s.total_paid) }}</td>
           <td class="text-danger fw-bold">₹{{ "{:,.0f}".format(s.pending_fee) }}</td>
+          <td>
+            <form method="post" action="{{ url_for('admin.send_fee_reminder', student_id=s.id) }}">
+              <button class="btn btn-sm btn-outline-success"><i class="bi bi-whatsapp"></i> Remind</button>
+            </form>
+          </td>
         </tr>
         {% else %}
-        <tr><td colspan="7" class="text-muted text-center">No pending fees. 🎉</td></tr>
+        <tr><td colspan="8" class="text-muted text-center">No pending fees. 🎉</td></tr>
         {% endfor %}
       </tbody>
     </table>

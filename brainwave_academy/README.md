@@ -9,7 +9,14 @@ can even "Add to Home Screen" on a phone for an app-like icon).
 
 - **Admin login** and **Teacher login** with role-based access.
 - **Student management** - admission details, class & division, parent name/WhatsApp
-  number, address, discount/scholarship (recorded per student with a reason).
+  number, address, place, the school the student currently studies in (with an
+  auto-suggest combobox from previously entered values), and discount/scholarship
+  (recorded per student with a reason).
+- **Bulk add students from Excel** - download a ready-made `.xlsx` template, fill it in
+  (only admission no., name, class, division and parent WhatsApp number are mandatory -
+  everything else is optional), and upload it back to create many students at once.
+  Unknown divisions are created automatically; bad rows are skipped with a clear reason
+  shown on screen, valid rows are still added.
 - **Teacher management** - create teacher logins and assign each teacher to one or more
   class divisions.
 - **Class & division management** - add divisions per class and edit each class's base
@@ -17,7 +24,9 @@ can even "Add to Home Screen" on a phone for an app-like icon).
   +1 = ₹20,000, +2 = ₹20,000.
 - **Attendance marking** - teachers pick their division and date, then tick/untick each
   student (Present/Absent) with big touch-friendly switches, with "Mark All Present /
-  Absent" shortcuts.
+  Absent" shortcuts. Live attendance status and a full attendance report (with a
+  present/absent/not-marked breakdown per division) are one tap away from the top menu
+  and the admin dashboard.
 - **Automatic absence notification** - when attendance is saved, every absent student's
   parent is notified on WhatsApp automatically (if a Twilio WhatsApp sender is configured)
   or via a one-tap `wa.me` link for office staff to send manually - no paid API is
@@ -25,8 +34,15 @@ can even "Add to Home Screen" on a phone for an app-like icon).
 - **Fee collection with installments** - record partial payments against a student's
   total fee (class fee minus discount); pending balance is always shown and payments
   cannot exceed it.
-- **Accounts reports** - daily finance report (collections by date/mode/class), pending
-  fees report, discount/scholarship report, and a daily attendance report.
+- **Pending-fee WhatsApp reminders with a GPay/UPI pay link** - from the Pending Fees
+  report, send a reminder to one parent or to everyone with a pending balance at once.
+  The message includes a link to a Brainwave-branded page with a "Pay via GPay/UPI"
+  button pre-filled with the administrator's UPI ID and the exact amount due (set the
+  UPI ID once under **Settings**).
+- **Accounts reports** - fee collection report with **daily, monthly and custom
+  date-range** views (by payment mode and by class), a **pending fees** report, a
+  **class-wise** summary (expected/collected/pending + today's attendance per class), a
+  **student-wise** ledger report, a discount/scholarship report, and an attendance report.
 - **Brainwave Academy branding** - the app uses the academy's teal-to-blue gradient
   colour theme throughout (`app/static/img/logo.svg`, `app/static/css/style.css`).
   Replace `logo.svg` with the exact official logo file at any time; the color variables
@@ -56,9 +72,12 @@ password immediately** (top-right menu -> your name -> Change Password).
    they teach.
 3. **Students** -> Add Student -> pick the class/division; the fee defaults from the
    class but can be overridden per student, and any discount/scholarship is entered here
-   with a reason.
+   with a reason. For adding many students at once, use **Students -> Bulk Upload**
+   instead: download the Excel template, fill in a row per student, and upload it back.
 4. Teachers log in with their own username/password and only see their assigned
    divisions, under **Attendance** and **My Students**.
+5. **Settings** -> enter the administrator's UPI ID (e.g. `yourname@okaxis`) and payee
+   name to enable the "Pay via GPay/UPI" link in fee reminder messages.
 
 ### Enabling automatic WhatsApp sending (optional)
 

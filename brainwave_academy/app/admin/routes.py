@@ -1,6 +1,6 @@
 from datetime import date, datetime, timedelta
 
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, send_file
 from flask_login import login_required, current_user
 from sqlalchemy import func
 
@@ -14,14 +14,23 @@ from ..models import (
     FeePayment,
     Attendance,
     MessageLog,
+    Settings,
 )
 from ..utils.decorators import admin_required
+from ..utils.payment import build_pay_url, fee_reminder_message
+from ..utils.whatsapp import send_whatsapp_message
+from ..utils.excel import build_template, parse_upload
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
 
 def _classes_sorted():
     return sorted(SchoolClass.query.all(), key=lambda c: c.sort_key)
+
+
+def _distinct_values(column):
+    values = {row[0].strip() for row in db.session.query(column).all() if row[0] and row[0].strip()}
+    return sorted(values)
 
 
 # ---------------------------------------------------------------- dashboard
@@ -113,7 +122,13 @@ def student_form(student_id=None):
         existing = Student.query.filter_by(admission_no=admission_no).first()
         if existing and (not student or existing.id != student.id):
             flash("That admission number is already in use.", "danger")
-            return render_template("admin/student_form.html", student=student, classes=_classes_sorted())
+            return render_template(
+                "admin/student_form.html",
+                student=student,
+                classes=_classes_sorted(),
+                places=_distinct_values(Student.place),
+                school_names=_distinct_values(Student.school_name),
+            )
 
         override_raw = request.form.get("base_fee_override", "").strip()
 
@@ -127,6 +142,8 @@ def student_form(student_id=None):
         student.parent_name = request.form.get("parent_name", "").strip()
         student.parent_whatsapp = request.form.get("parent_whatsapp", "").strip()
         student.address = request.form.get("address", "").strip()
+        student.place = request.form.get("place", "").strip()
+        student.school_name = request.form.get("school_name", "").strip()
         student.base_fee_override = float(override_raw) if override_raw else None
         student.discount_amount = float(request.form.get("discount_amount") or 0)
         student.discount_reason = request.form.get("discount_reason", "").strip()
@@ -142,7 +159,13 @@ def student_form(student_id=None):
         flash(f"Student {student.name} saved.", "success")
         return redirect(url_for("admin.student_detail", student_id=student.id))
 
-    return render_template("admin/student_form.html", student=student, classes=_classes_sorted())
+    return render_template(
+        "admin/student_form.html",
+        student=student,
+        classes=_classes_sorted(),
+        places=_distinct_values(Student.place),
+        school_names=_distinct_values(Student.school_name),
+    )
 
 
 @admin_bp.route("/students/<int:student_id>")
@@ -349,36 +372,130 @@ def delete_division(division_id):
 
 
 # --------------------------------------------------------------- reports
-@admin_bp.route("/reports/daily")
+@admin_bp.route("/reports/finance")
 @login_required
 @admin_required
-def daily_report():
-    report_date_raw = request.args.get("date")
-    report_date = (
-        datetime.strptime(report_date_raw, "%Y-%m-%d").date() if report_date_raw else date.today()
-    )
+def finance_report():
+    period = request.args.get("period", "daily")
+    today = date.today()
+
+    if period == "monthly":
+        year = request.args.get("year", type=int) or today.year
+        month = request.args.get("month", type=int) or today.month
+        start = date(year, month, 1)
+        end = date(year + (1 if month == 12 else 0), 1 if month == 12 else month + 1, 1) - timedelta(days=1)
+        label = start.strftime("%B %Y")
+    elif period == "range":
+        start_raw = request.args.get("start")
+        end_raw = request.args.get("end")
+        start = datetime.strptime(start_raw, "%Y-%m-%d").date() if start_raw else today.replace(day=1)
+        end = datetime.strptime(end_raw, "%Y-%m-%d").date() if end_raw else today
+        year, month = start.year, start.month
+        label = f"{start.strftime('%d-%m-%Y')} to {end.strftime('%d-%m-%Y')}"
+    else:
+        period = "daily"
+        date_raw = request.args.get("date")
+        start = end = datetime.strptime(date_raw, "%Y-%m-%d").date() if date_raw else today
+        year, month = start.year, start.month
+        label = start.strftime("%d-%m-%Y")
 
     payments = (
-        FeePayment.query.filter_by(payment_date=report_date).order_by(FeePayment.created_at).all()
+        FeePayment.query.filter(FeePayment.payment_date >= start, FeePayment.payment_date <= end)
+        .order_by(FeePayment.payment_date, FeePayment.created_at)
+        .all()
     )
     total = sum(p.amount for p in payments)
 
     by_mode = {}
-    for p in payments:
-        by_mode[p.mode] = by_mode.get(p.mode, 0) + p.amount
-
     by_class = {}
     for p in payments:
+        by_mode[p.mode] = by_mode.get(p.mode, 0) + p.amount
         class_name = p.student.school_class.name
         by_class[class_name] = by_class.get(class_name, 0) + p.amount
 
     return render_template(
-        "admin/daily_report.html",
-        report_date=report_date,
+        "admin/finance_report.html",
+        period=period,
+        start=start,
+        end=end,
+        label=label,
+        year=year,
+        month=month,
         payments=payments,
         total=total,
         by_mode=by_mode,
         by_class=by_class,
+    )
+
+
+@admin_bp.route("/reports/class-wise")
+@login_required
+@admin_required
+def class_wise_report():
+    today = date.today()
+    rows = []
+    for school_class in _classes_sorted():
+        class_students = [s for s in school_class.students if s.active]
+        student_ids = [s.id for s in class_students]
+        expected = sum(s.total_fee for s in class_students)
+        collected = sum(s.total_paid for s in class_students)
+        if student_ids:
+            present_today = Attendance.query.filter(
+                Attendance.date == today,
+                Attendance.status == "present",
+                Attendance.student_id.in_(student_ids),
+            ).count()
+            absent_today = Attendance.query.filter(
+                Attendance.date == today,
+                Attendance.status == "absent",
+                Attendance.student_id.in_(student_ids),
+            ).count()
+        else:
+            present_today = absent_today = 0
+
+        rows.append(
+            {
+                "school_class": school_class,
+                "student_count": len(class_students),
+                "expected": expected,
+                "collected": collected,
+                "pending": round(expected - collected, 2),
+                "present_today": present_today,
+                "absent_today": absent_today,
+            }
+        )
+
+    return render_template("admin/class_report.html", rows=rows)
+
+
+@admin_bp.route("/reports/student-wise")
+@login_required
+@admin_required
+def student_wise_report():
+    class_id = request.args.get("class_id", type=int)
+    q = request.args.get("q", "").strip()
+
+    query = Student.query.filter_by(active=True)
+    if class_id:
+        query = query.filter_by(class_id=class_id)
+    if q:
+        like = f"%{q}%"
+        query = query.filter(db.or_(Student.name.ilike(like), Student.admission_no.ilike(like)))
+
+    student_list = query.order_by(Student.name).all()
+    totals = {
+        "expected": sum(s.total_fee for s in student_list),
+        "collected": sum(s.total_paid for s in student_list),
+        "pending": sum(s.pending_fee for s in student_list),
+    }
+
+    return render_template(
+        "admin/student_wise_report.html",
+        students=student_list,
+        classes=_classes_sorted(),
+        selected_class_id=class_id,
+        q=q,
+        totals=totals,
     )
 
 
@@ -402,6 +519,60 @@ def pending_fees_report():
         selected_class_id=class_id,
         total_pending=total_pending,
     )
+
+
+def _queue_fee_reminder(student):
+    pay_url = build_pay_url(student.id)
+    message = fee_reminder_message(student, pay_url)
+    result = send_whatsapp_message(student.parent_whatsapp, message)
+    db.session.add(
+        MessageLog(
+            student_id=student.id,
+            date=date.today(),
+            category="fee_reminder",
+            message=message,
+            phone=student.parent_whatsapp,
+            status=result["status"],
+            detail=result["detail"],
+            manual_link=result.get("link"),
+        )
+    )
+
+
+@admin_bp.route("/students/<int:student_id>/send-fee-reminder", methods=["POST"])
+@login_required
+@admin_required
+def send_fee_reminder(student_id):
+    student = Student.query.get_or_404(student_id)
+    if student.pending_fee <= 0:
+        flash(f"{student.name} has no pending fee.", "info")
+    else:
+        _queue_fee_reminder(student)
+        db.session.commit()
+        flash(f"Fee reminder queued for {student.name}'s parent on WhatsApp.", "success")
+    return redirect(request.referrer or url_for("admin.student_detail", student_id=student.id))
+
+
+@admin_bp.route("/reports/pending-fees/send-reminders", methods=["POST"])
+@login_required
+@admin_required
+def send_bulk_fee_reminders():
+    class_id = request.form.get("class_id", type=int)
+    query = Student.query.filter_by(active=True)
+    if class_id:
+        query = query.filter_by(class_id=class_id)
+    pending_students = [s for s in query.all() if s.pending_fee > 0]
+
+    for student in pending_students:
+        _queue_fee_reminder(student)
+    db.session.commit()
+
+    flash(
+        f"Fee reminders queued for {len(pending_students)} student(s). "
+        f"Check the Messages page to send/verify each one on WhatsApp.",
+        "success",
+    )
+    return redirect(url_for("admin.pending_fees_report", class_id=class_id) if class_id else url_for("admin.pending_fees_report"))
 
 
 @admin_bp.route("/reports/discounts")
@@ -435,11 +606,26 @@ def attendance_report():
     )
     present = [r for r in records if r.status == "present"]
     absent = [r for r in records if r.status == "absent"]
+
+    by_division = {}
+    for division in Division.query.all():
+        active_count = sum(1 for s in division.students if s.active)
+        if active_count == 0:
+            continue
+        marked = [r for r in records if r.student.division_id == division.id]
+        by_division[division] = {
+            "total": active_count,
+            "present": sum(1 for r in marked if r.status == "present"),
+            "absent": sum(1 for r in marked if r.status == "absent"),
+            "unmarked": active_count - len(marked),
+        }
+
     return render_template(
         "admin/attendance_report.html",
         report_date=report_date,
         present=present,
         absent=absent,
+        by_division=by_division,
     )
 
 
@@ -462,3 +648,153 @@ def mark_message_sent(message_id):
     log.detail = f"Marked as sent manually by {current_user.name}"
     db.session.commit()
     return redirect(url_for("admin.messages"))
+
+
+# ---------------------------------------------------------------- settings
+@admin_bp.route("/settings", methods=["GET", "POST"])
+@login_required
+@admin_required
+def settings():
+    settings_obj = Settings.get()
+    if request.method == "POST":
+        settings_obj.academy_name = request.form.get("academy_name", "").strip() or "Brainwave Academy"
+        settings_obj.upi_id = request.form.get("upi_id", "").strip()
+        settings_obj.upi_payee_name = request.form.get("upi_payee_name", "").strip()
+        db.session.commit()
+        flash("Settings updated.", "success")
+        return redirect(url_for("admin.settings"))
+    return render_template("admin/settings.html", settings=settings_obj)
+
+
+# ---------------------------------------------------------- bulk upload
+@admin_bp.route("/students/bulk-upload", methods=["GET", "POST"])
+@login_required
+@admin_required
+def students_bulk_upload():
+    if request.method == "POST":
+        file = request.files.get("file")
+        if not file or file.filename == "":
+            flash("Please choose an Excel (.xlsx) file to upload.", "danger")
+            return redirect(url_for("admin.students_bulk_upload"))
+
+        try:
+            rows = parse_upload(file.stream)
+        except ValueError as exc:
+            flash(str(exc), "danger")
+            return redirect(url_for("admin.students_bulk_upload"))
+
+        classes_by_name = {c.name.strip().lower(): c for c in SchoolClass.query.all()}
+        existing_admission_nos = {
+            a.lower() for (a,) in db.session.query(Student.admission_no).all()
+        }
+        created = []
+        errors = []
+
+        for record in rows:
+            row_no = record.get("_row")
+            missing = [
+                field
+                for field in ("admission_no", "name", "class", "division", "parent_whatsapp")
+                if not str(record.get(field) or "").strip()
+            ]
+            if missing:
+                errors.append(f"Row {row_no}: missing required field(s) - {', '.join(missing)}.")
+                continue
+
+            admission_no = str(record["admission_no"]).strip()
+            if admission_no.lower() in existing_admission_nos:
+                errors.append(f"Row {row_no}: admission number '{admission_no}' already exists or is repeated in the sheet.")
+                continue
+
+            class_name = str(record["class"]).strip()
+            school_class = classes_by_name.get(class_name.lower())
+            if not school_class:
+                valid = ", ".join(c.name for c in _classes_sorted())
+                errors.append(f"Row {row_no}: unknown class '{class_name}'. Valid classes: {valid}.")
+                continue
+
+            division_name = str(record["division"]).strip().upper()
+            division = next((d for d in school_class.divisions if d.name.upper() == division_name), None)
+            if division is None:
+                division = Division(name=division_name, class_id=school_class.id)
+                db.session.add(division)
+                db.session.flush()
+                school_class.divisions.append(division)
+
+            student = Student(
+                admission_no=admission_no,
+                name=str(record["name"]).strip(),
+                class_id=school_class.id,
+                division_id=division.id,
+                parent_name=str(record.get("parent_name") or "").strip(),
+                parent_whatsapp=str(record["parent_whatsapp"]).strip(),
+                address=str(record.get("address") or "").strip(),
+                place=str(record.get("place") or "").strip(),
+                school_name=str(record.get("school_name") or "").strip(),
+                dob=_parse_flexible_date(record.get("dob")),
+                admission_date=_parse_flexible_date(record.get("admission_date")) or date.today(),
+                discount_reason=str(record.get("discount_reason") or "").strip(),
+            )
+
+            try:
+                student.discount_amount = float(record.get("discount_amount") or 0)
+            except (TypeError, ValueError):
+                errors.append(f"Row {row_no}: invalid discount_amount, defaulted to 0.")
+                student.discount_amount = 0
+
+            override_raw = record.get("base_fee_override")
+            if override_raw not in (None, ""):
+                try:
+                    student.base_fee_override = float(override_raw)
+                except (TypeError, ValueError):
+                    errors.append(f"Row {row_no}: invalid base_fee_override, ignored.")
+
+            db.session.add(student)
+            existing_admission_nos.add(admission_no.lower())
+            created.append(student)
+
+        if created:
+            db.session.commit()
+        else:
+            db.session.rollback()
+
+        flash(
+            f"{len(created)} student(s) added successfully." if created else "No students were added - see the errors below.",
+            "success" if created else "warning",
+        )
+        return render_template(
+            "admin/students_bulk_upload.html",
+            classes=_classes_sorted(),
+            results=True,
+            created=created,
+            errors=errors,
+        )
+
+    return render_template("admin/students_bulk_upload.html", classes=_classes_sorted(), results=False)
+
+
+def _parse_flexible_date(value):
+    if value in (None, ""):
+        return None
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    try:
+        return datetime.strptime(str(value).strip(), "%Y-%m-%d").date()
+    except ValueError:
+        return None
+
+
+@admin_bp.route("/students/bulk-upload/template")
+@login_required
+@admin_required
+def students_bulk_upload_template():
+    class_names = [c.name for c in _classes_sorted()]
+    buffer = build_template(class_names)
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name="brainwave_students_template.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )

@@ -110,6 +110,8 @@ class Student(db.Model):
     parent_name = db.Column(db.String(120))
     parent_whatsapp = db.Column(db.String(20), nullable=False)
     address = db.Column(db.String(255))
+    place = db.Column(db.String(120))
+    school_name = db.Column(db.String(150))
 
     dob = db.Column(db.Date, nullable=True)
     admission_date = db.Column(db.Date, default=date.today, nullable=False)
@@ -192,6 +194,7 @@ class MessageLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey("students.id"), nullable=False)
     date = db.Column(db.Date, default=date.today)
+    category = db.Column(db.String(20), default="attendance", nullable=False)  # attendance / fee_reminder
     message = db.Column(db.Text, nullable=False)
     phone = db.Column(db.String(20))
     status = db.Column(db.String(20), default="pending")  # sent / failed / manual
@@ -203,3 +206,26 @@ class MessageLog(db.Model):
 
     def __repr__(self):
         return f"<MessageLog {self.student_id} {self.status}>"
+
+
+class Settings(db.Model):
+    """Singleton row (id=1) holding academy-wide, admin-editable settings."""
+
+    __tablename__ = "settings"
+
+    id = db.Column(db.Integer, primary_key=True)
+    academy_name = db.Column(db.String(120), default="Brainwave Academy", nullable=False)
+    upi_id = db.Column(db.String(120))
+    upi_payee_name = db.Column(db.String(120))
+
+    @classmethod
+    def get(cls):
+        settings = cls.query.get(1)
+        if settings is None:
+            settings = cls(id=1, academy_name="Brainwave Academy")
+            db.session.add(settings)
+            db.session.commit()
+        return settings
+
+    def __repr__(self):
+        return f"<Settings {self.academy_name}>"

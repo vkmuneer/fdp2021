@@ -51,6 +51,24 @@
           <input type="text" name="address" class="form-control" value="{{ student.address if student else '' }}">
         </div>
 
+        <div class="col-md-6">
+          <label class="form-label">Place</label>
+          <input type="text" name="place" class="form-control" list="place-options" placeholder="e.g. Omassery"
+                 value="{{ student.place if student else '' }}">
+          <datalist id="place-options">
+            {% for p in places %}<option value="{{ p }}">{% endfor %}
+          </datalist>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">School Studying In</label>
+          <input type="text" name="school_name" class="form-control" list="school-options"
+                 placeholder="e.g. Govt. Higher Secondary School - pick from the list or type a new one"
+                 value="{{ student.school_name if student else '' }}">
+          <datalist id="school-options">
+            {% for s in school_names %}<option value="{{ s }}">{% endfor %}
+          </datalist>
+        </div>
+
         <div class="col-md-4">
           <label class="form-label">Date of Birth</label>
           <input type="date" name="dob" class="form-control"

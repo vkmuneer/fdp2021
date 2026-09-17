@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Student-wise Report{% endblock %}
+{% block content %}
+<h4 class="text-bw-teal mb-3">Student-wise Report</h4>
+{% set active = 'student' %}
+{% include "admin/_report_nav.html" %}
+
+<form method="get" class="row g-2 mb-3">
+  <div class="col-6 col-md-3">
+    <select name="class_id" class="form-select" onchange="this.form.submit()">
+      <option value="">All Classes</option>
+      {% for c in classes %}
+      <option value="{{ c.id }}" {{ 'selected' if selected_class_id == c.id }}>{{ c.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-8 col-md-4">
+    <input type="text" name="q" class="form-control" placeholder="Search name or admission no." value="{{ q }}">
+  </div>
+  <div class="col-4 col-md-2">
+    <button class="btn btn-outline-secondary w-100" type="submit">Search</button>
+  </div>
+</form>
+
+<div class="row g-3 mb-3">
+  <div class="col-4">
+    <div class="card bw-card h-100"><div class="card-body">
+      <div class="small text-muted">Expected</div>
+      <div class="fs-5 fw-bold">₹{{ "{:,.0f}".format(totals.expected) }}</div>
+    </div></div>
+  </div>
+  <div class="col-4">
+    <div class="card bw-card h-100"><div class="card-body">
+      <div class="small text-muted">Collected</div>
+      <div class="fs-5 fw-bold text-success">₹{{ "{:,.0f}".format(totals.collected) }}</div>
+    </div></div>
+  </div>
+  <div class="col-4">
+    <div class="card bw-card h-100"><div class="card-body">
+      <div class="small text-muted">Pending</div>
+      <div class="fs-5 fw-bold text-danger">₹{{ "{:,.0f}".format(totals.pending) }}</div>
+    </div></div>
+  </div>
+</div>
+
+<div class="card bw-card">
+  <div class="table-responsive">
+    <table class="table mb-0 align-middle">
+      <thead><tr><th>Admission No.</th><th>Name</th><th>Class</th><th>Total Fee</th><th>Paid</th><th>Pending</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for s in students %}
+        <tr>
+          <td>{{ s.admission_no }}</td>
+          <td><a href="{{ url_for('admin.student_detail', student_id=s.id) }}">{{ s.name }}</a></td>
+          <td>{{ s.school_class.name }}-{{ s.division.name }}</td>
+          <td>₹{{ "{:,.0f}".format(s.total_fee) }}</td>
+          <td>₹{{ "{:,.0f}".format(s.total_paid) }}</td>
+          <td class="{{ 'text-danger fw-bold' if s.pending_fee > 0 }}">₹{{ "{:,.0f}".format(s.pending_fee) }}</td>
+          <td><span class="badge {{ 'badge-paid' if s.payment_status == 'Paid' else ('badge-partial' if s.payment_status == 'Partial' else 'badge-unpaid') }}">{{ s.payment_status }}</span></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="text-muted text-center">No students found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

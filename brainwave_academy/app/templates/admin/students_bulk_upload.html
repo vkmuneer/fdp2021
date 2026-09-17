@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Bulk Add Students{% endblock %}
+{% block content %}
+<h4 class="text-bw-teal mb-3">Bulk Add Students from Excel</h4>
+
+<div class="card bw-card mb-3">
+  <div class="card-body">
+    <p>
+      1. Download the template below, fill in one row per student (only the fields
+      marked <strong>*</strong> are required), then upload it back here.
+    </p>
+    <a href="{{ url_for('admin.students_bulk_upload_template') }}" class="btn btn-outline-secondary mb-3">
+      <i class="bi bi-download"></i> Download Excel Template
+    </a>
+
+    <form method="post" enctype="multipart/form-data">
+      <div class="mb-3">
+        <label class="form-label">Upload filled sheet (.xlsx)</label>
+        <input type="file" name="file" accept=".xlsx" class="form-control" required>
+      </div>
+      <button type="submit" class="btn btn-bw-primary"><i class="bi bi-upload"></i> Upload &amp; Add Students</button>
+      <a href="{{ url_for('admin.students') }}" class="btn btn-outline-secondary">Cancel</a>
+    </form>
+  </div>
+</div>
+
+{% if results %}
+<div class="card bw-card">
+  <div class="card-header bg-white fw-bold text-bw-teal">Upload Results</div>
+  <div class="card-body">
+    <p class="fw-bold {{ 'text-success' if created else 'text-danger' }}">
+      {{ created|length }} student(s) added successfully.
+    </p>
+
+    {% if created %}
+    <ul class="list-group list-group-flush mb-3">
+      {% for s in created %}
+      <li class="list-group-item">
+        <a href="{{ url_for('admin.student_detail', student_id=s.id) }}">{{ s.name }}</a>
+        <span class="text-muted small">({{ s.admission_no }}, {{ s.school_class.name }}-{{ s.division.name }})</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+
+    {% if errors %}
+    <p class="fw-bold text-danger">{{ errors|length }} row(s) had problems and were skipped:</p>
+    <ul class="list-group list-group-flush">
+      {% for err in errors %}
+      <li class="list-group-item text-danger small">{{ err }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

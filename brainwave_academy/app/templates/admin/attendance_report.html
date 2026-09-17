@@ -2,19 +2,36 @@
 {% block title %}Attendance Report{% endblock %}
 {% block content %}
 <h4 class="text-bw-teal mb-3">Attendance Report</h4>
-
-<ul class="nav nav-pills mb-3">
-  <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.daily_report') }}">Daily Collection</a></li>
-  <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.pending_fees_report') }}">Pending Fees</a></li>
-  <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.discount_report') }}">Discounts</a></li>
-  <li class="nav-item"><a class="nav-link active" href="{{ url_for('admin.attendance_report') }}">Attendance</a></li>
-</ul>
+{% set active = 'attendance' %}
+{% include "admin/_report_nav.html" %}
 
 <form method="get" class="row g-2 mb-3">
   <div class="col-6 col-md-3">
     <input type="date" name="date" class="form-control" value="{{ report_date.isoformat() }}" onchange="this.form.submit()">
   </div>
 </form>
+
+<div class="card bw-card mb-3">
+  <div class="card-header bg-white fw-bold text-bw-teal">Status by Division</div>
+  <div class="table-responsive">
+    <table class="table mb-0 align-middle">
+      <thead><tr><th>Division</th><th>Students</th><th class="text-success">Present</th><th class="text-danger">Absent</th><th class="text-muted">Not Marked</th></tr></thead>
+      <tbody>
+        {% for division, stats in by_division.items() %}
+        <tr>
+          <td>{{ division.display_name }}</td>
+          <td>{{ stats.total }}</td>
+          <td class="text-success">{{ stats.present }}</td>
+          <td class="text-danger">{{ stats.absent }}</td>
+          <td class="text-muted">{{ stats.unmarked }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="text-muted text-center">No divisions with students yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
 
 <div class="row g-3">
   <div class="col-md-6">

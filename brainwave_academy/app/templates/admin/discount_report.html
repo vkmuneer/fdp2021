@@ -2,13 +2,8 @@
 {% block title %}Discount / Scholarship Report{% endblock %}
 {% block content %}
 <h4 class="text-bw-teal mb-3">Discount / Scholarship Report</h4>
-
-<ul class="nav nav-pills mb-3">
-  <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.daily_report') }}">Daily Collection</a></li>
-  <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.pending_fees_report') }}">Pending Fees</a></li>
-  <li class="nav-item"><a class="nav-link active" href="{{ url_for('admin.discount_report') }}">Discounts</a></li>
-  <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.attendance_report') }}">Attendance</a></li>
-</ul>
+{% set active = 'discounts' %}
+{% include "admin/_report_nav.html" %}
 
 <div class="alert alert-info">Total discounts/scholarships granted: <strong>₹{{ "{:,.0f}".format(total_discount) }}</strong></div>
 

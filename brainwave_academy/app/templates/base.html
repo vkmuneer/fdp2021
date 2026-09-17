@@ -30,9 +30,20 @@
         {% if current_user.is_admin %}
         <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.dashboard') }}">Dashboard</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.students') }}">Students</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.attendance_report') }}"><i class="bi bi-check2-square"></i> Attendance</a></li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Reports</a>
+          <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="{{ url_for('admin.finance_report') }}">Fee Collection (Daily/Monthly/Range)</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('admin.pending_fees_report') }}">Pending Fees</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('admin.class_wise_report') }}">Class-wise</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('admin.student_wise_report') }}">Student-wise</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('admin.discount_report') }}">Discounts</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('admin.attendance_report') }}">Attendance</a></li>
+          </ul>
+        </li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.teachers') }}">Teachers</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.classes') }}">Classes</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.daily_report') }}">Reports</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.messages') }}">Messages</a></li>
         {% else %}
         <li class="nav-item"><a class="nav-link" href="{{ url_for('teacher.dashboard') }}">Dashboard</a></li>
@@ -41,6 +52,9 @@
         {% endif %}
       </ul>
       <ul class="navbar-nav">
+        {% if current_user.is_admin %}
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.settings') }}"><i class="bi bi-gear"></i> Settings</a></li>
+        {% endif %}
         <li class="nav-item"><a class="nav-link" href="{{ url_for('auth.change_password') }}"><i class="bi bi-key"></i> {{ current_user.name }}</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('auth.logout') }}"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
       </ul>
@@ -69,9 +83,9 @@
   {% if current_user.is_admin %}
   <a href="{{ url_for('admin.dashboard') }}" class="{{ 'active' if request.endpoint == 'admin.dashboard' }}"><i class="bi bi-speedometer2"></i>Home</a>
   <a href="{{ url_for('admin.students') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('admin.student') }}"><i class="bi bi-people"></i>Students</a>
-  <a href="{{ url_for('admin.daily_report') }}" class="{{ 'active' if request.endpoint and 'report' in request.endpoint }}"><i class="bi bi-cash-coin"></i>Reports</a>
+  <a href="{{ url_for('admin.attendance_report') }}" class="{{ 'active' if request.endpoint == 'admin.attendance_report' }}"><i class="bi bi-check2-square"></i>Attend.</a>
+  <a href="{{ url_for('admin.finance_report') }}" class="{{ 'active' if request.endpoint and 'report' in request.endpoint and request.endpoint != 'admin.attendance_report' }}"><i class="bi bi-cash-coin"></i>Reports</a>
   <a href="{{ url_for('admin.messages') }}" class="{{ 'active' if request.endpoint == 'admin.messages' }}"><i class="bi bi-whatsapp"></i>Messages</a>
-  <a href="{{ url_for('admin.teachers') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('admin.teacher') }}"><i class="bi bi-person-badge"></i>Teachers</a>
   {% else %}
   <a href="{{ url_for('teacher.dashboard') }}" class="{{ 'active' if request.endpoint == 'teacher.dashboard' }}"><i class="bi bi-speedometer2"></i>Home</a>
   <a href="{{ url_for('teacher.attendance') }}" class="{{ 'active' if request.endpoint == 'teacher.attendance' }}"><i class="bi bi-check2-square"></i>Attendance</a>

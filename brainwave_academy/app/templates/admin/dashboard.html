@@ -29,12 +29,14 @@
     </div>
   </div>
   <div class="col-6 col-md-3">
+    <a href="{{ url_for('admin.attendance_report') }}" class="text-decoration-none">
     <div class="card bw-stat-card h-100">
       <div class="card-body">
         <div class="small">Today: Present / Absent</div>
         <div class="stat-value">{{ today_present }} / {{ today_absentees }}</div>
       </div>
     </div>
+    </a>
   </div>
 </div>
 

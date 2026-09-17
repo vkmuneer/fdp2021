@@ -1,7 +1,7 @@
 {% extends "base.html" %}
-{% block title %}Absence Messages{% endblock %}
+{% block title %}WhatsApp Messages{% endblock %}
 {% block content %}
-<h4 class="text-bw-teal mb-3">Absence WhatsApp Messages</h4>
+<h4 class="text-bw-teal mb-3">WhatsApp Messages (Absence &amp; Fee Reminders)</h4>
 
 {% if pending_count %}
 <div class="alert alert-warning">
@@ -19,7 +19,10 @@
         {% elif log.status == 'failed' %}<span class="badge bg-danger">Failed</span>
         {% else %}<span class="badge bg-warning text-dark">Manual</span>{% endif %}
       </div>
-      <div class="small text-muted">{{ log.date.strftime('%d-%m-%Y') if log.date else '' }} &middot; {{ log.phone }}</div>
+      <div class="small text-muted">
+        {{ log.date.strftime('%d-%m-%Y') if log.date else '' }} &middot; {{ log.phone }}
+        <span class="badge bg-light text-dark border">{{ 'Fee Reminder' if log.category == 'fee_reminder' else 'Absence' }}</span>
+      </div>
       <div class="small mt-1">{{ log.message }}</div>
       {% if log.status == 'manual' %}
       <div class="mt-2 d-flex gap-2">
@@ -39,11 +42,12 @@
 <div class="d-none d-md-block card bw-card">
   <div class="table-responsive">
     <table class="table mb-0 align-middle">
-      <thead><tr><th>Date</th><th>Student</th><th>Phone</th><th>Message</th><th>Status</th><th></th></tr></thead>
+      <thead><tr><th>Date</th><th>Type</th><th>Student</th><th>Phone</th><th>Message</th><th>Status</th><th></th></tr></thead>
       <tbody>
         {% for log in logs %}
         <tr>
           <td>{{ log.date.strftime('%d-%m-%Y') if log.date else '' }}</td>
+          <td><span class="badge bg-light text-dark border">{{ 'Fee Reminder' if log.category == 'fee_reminder' else 'Absence' }}</span></td>
           <td>{{ log.student.name if log.student else 'Unknown' }}</td>
           <td>{{ log.phone }}</td>
           <td class="small">{{ log.message }}</td>
@@ -62,7 +66,7 @@
           </td>
         </tr>
         {% else %}
-        <tr><td colspan="6" class="text-muted text-center">No messages yet.</td></tr>
+        <tr><td colspan="7" class="text-muted text-center">No messages yet.</td></tr>
         {% endfor %}
       </tbody>
     </table>

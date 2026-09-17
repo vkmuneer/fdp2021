@@ -23,10 +23,12 @@ def create_app(config_class=Config):
     from .auth.routes import auth_bp
     from .admin.routes import admin_bp
     from .teacher.routes import teacher_bp
+    from .public.routes import public_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(teacher_bp)
+    app.register_blueprint(public_bp)
 
     from flask import redirect, url_for
     from flask_login import current_user
@@ -55,7 +57,7 @@ def create_app(config_class=Config):
 def _ensure_seed_data(app):
     """Create default classes/divisions and an admin account the first time
     the app runs, so the school can log in immediately after installation."""
-    from .models import SchoolClass, Division, User
+    from .models import SchoolClass, Division, User, Settings
 
     if SchoolClass.query.first() is None:
         for name, fee in app.config["DEFAULT_CLASS_FEES"].items():
@@ -72,6 +74,10 @@ def _ensure_seed_data(app):
         )
         admin.set_password(app.config["DEFAULT_ADMIN_PASSWORD"])
         db.session.add(admin)
+        db.session.commit()
+
+    if Settings.query.get(1) is None:
+        db.session.add(Settings(id=1, academy_name="Brainwave Academy"))
         db.session.commit()
 
 

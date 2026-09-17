@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Class-wise Report{% endblock %}
+{% block content %}
+<h4 class="text-bw-teal mb-3">Class-wise Report</h4>
+{% set active = 'class' %}
+{% include "admin/_report_nav.html" %}
+
+<div class="card bw-card">
+  <div class="table-responsive">
+    <table class="table mb-0 align-middle">
+      <thead>
+        <tr>
+          <th>Class</th><th>Students</th><th>Expected Fee</th><th>Collected</th><th>Pending</th>
+          <th class="text-success">Present Today</th><th class="text-danger">Absent Today</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td class="fw-bold">Class {{ row.school_class.name }}</td>
+          <td>{{ row.student_count }}</td>
+          <td>₹{{ "{:,.0f}".format(row.expected) }}</td>
+          <td class="text-success">₹{{ "{:,.0f}".format(row.collected) }}</td>
+          <td class="text-danger fw-bold">₹{{ "{:,.0f}".format(row.pending) }}</td>
+          <td class="text-success">{{ row.present_today }}</td>
+          <td class="text-danger">{{ row.absent_today }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="text-muted text-center">No classes found.</td></tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr class="fw-bold">
+          <td>Total</td>
+          <td>{{ rows|sum(attribute='student_count') }}</td>
+          <td>₹{{ "{:,.0f}".format(rows|sum(attribute='expected')) }}</td>
+          <td class="text-success">₹{{ "{:,.0f}".format(rows|sum(attribute='collected')) }}</td>
+          <td class="text-danger">₹{{ "{:,.0f}".format(rows|sum(attribute='pending')) }}</td>
+          <td colspan="2"></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+{% endblock %}
