@@ -20,13 +20,27 @@
           <input type="text" name="phone" class="form-control" value="{{ teacher.phone if teacher else '' }}">
         </div>
         <div class="col-md-6">
-          <label class="form-label">Subject</label>
-          <input type="text" name="subject" class="form-control" value="{{ teacher.subject if teacher else '' }}">
-        </div>
-        <div class="col-md-6">
           <label class="form-label">{{ 'Reset Password' if teacher else 'Password *' }}</label>
           <input type="password" name="password" class="form-control" {{ 'required' if not teacher }}
                  placeholder="{{ 'Leave blank to keep current password' if teacher else '' }}">
+        </div>
+        <div class="col-12">
+          <label class="form-label">
+            Subjects Handling
+            {% if not subjects %}<span class="text-muted small">(none defined yet - add some under <a href="{{ url_for('admin.masters') }}">Master Data</a>)</span>{% endif %}
+          </label>
+          <div class="row">
+            {% for s in subjects %}
+            <div class="col-6 col-md-3">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="subject_ids" value="{{ s.id }}"
+                       id="subj{{ s.id }}"
+                       {{ 'checked' if teacher and s in teacher.subjects }}>
+                <label class="form-check-label" for="subj{{ s.id }}">{{ s.name }}</label>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
         </div>
         <div class="col-12">
           <label class="form-label">Assigned Classes / Divisions</label>

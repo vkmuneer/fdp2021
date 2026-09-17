@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Master Data{% endblock %}
+{% block content %}
+<h4 class="text-bw-teal mb-3">Master Data</h4>
+<p class="text-muted">
+  Manage the lists used as dropdowns/comboboxes elsewhere in the app - subjects for
+  teachers, and place/school for students. Add an item here once and it becomes
+  selectable everywhere.
+</p>
+
+<div class="row g-3">
+  <div class="col-12 col-md-4">
+    <div class="card bw-card h-100">
+      <div class="card-header bg-white fw-bold text-bw-teal">Subjects</div>
+      <ul class="list-group list-group-flush">
+        {% for s in subjects %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          {{ s.name }}
+          <form method="post" action="{{ url_for('admin.delete_subject', subject_id=s.id) }}"
+                onsubmit="return confirm('Remove subject {{ s.name }}?');">
+            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-x"></i></button>
+          </form>
+        </li>
+        {% else %}
+        <li class="list-group-item text-muted">No subjects yet.</li>
+        {% endfor %}
+      </ul>
+      <div class="card-footer bg-white">
+        <form method="post" action="{{ url_for('admin.add_subject') }}" class="row g-2">
+          <div class="col-8"><input type="text" name="name" class="form-control" placeholder="e.g. Mathematics" required></div>
+          <div class="col-4"><button class="btn btn-bw-primary w-100">Add</button></div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-md-4">
+    <div class="card bw-card h-100">
+      <div class="card-header bg-white fw-bold text-bw-teal">Places</div>
+      <ul class="list-group list-group-flush">
+        {% for p in places %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          {{ p.name }}
+          <form method="post" action="{{ url_for('admin.delete_place', place_id=p.id) }}"
+                onsubmit="return confirm('Remove place {{ p.name }}?');">
+            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-x"></i></button>
+          </form>
+        </li>
+        {% else %}
+        <li class="list-group-item text-muted">No places yet.</li>
+        {% endfor %}
+      </ul>
+      <div class="card-footer bg-white">
+        <form method="post" action="{{ url_for('admin.add_place') }}" class="row g-2">
+          <div class="col-8"><input type="text" name="name" class="form-control" placeholder="e.g. Omassery" required></div>
+          <div class="col-4"><button class="btn btn-bw-primary w-100">Add</button></div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-md-4">
+    <div class="card bw-card h-100">
+      <div class="card-header bg-white fw-bold text-bw-teal">Schools</div>
+      <ul class="list-group list-group-flush">
+        {% for s in schools %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          {{ s.name }}
+          <form method="post" action="{{ url_for('admin.delete_school', school_id=s.id) }}"
+                onsubmit="return confirm('Remove school {{ s.name }}?');">
+            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-x"></i></button>
+          </form>
+        </li>
+        {% else %}
+        <li class="list-group-item text-muted">No schools yet.</li>
+        {% endfor %}
+      </ul>
+      <div class="card-footer bg-white">
+        <form method="post" action="{{ url_for('admin.add_school') }}" class="row g-2">
+          <div class="col-8"><input type="text" name="name" class="form-control" placeholder="e.g. Govt HSS Omassery" required></div>
+          <div class="col-4"><button class="btn btn-bw-primary w-100">Add</button></div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

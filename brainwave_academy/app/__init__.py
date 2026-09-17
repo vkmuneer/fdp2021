@@ -48,6 +48,7 @@ def create_app(config_class=Config):
     with app.app_context():
         db.create_all()
         _auto_migrate(app)
+        _backfill_masters(app)
         _ensure_seed_data(app)
 
     register_cli(app)
@@ -79,6 +80,48 @@ def _auto_migrate(app):
             with db.engine.begin() as conn:
                 conn.execute(text(f'ALTER TABLE "{table.name}" ADD COLUMN "{column.name}" {col_type}'))
             app.logger.info("[auto-migrate] added column %s.%s", table.name, column.name)
+
+
+def _backfill_masters(app):
+    """One-time (idempotent) migration for the subject/place/school master
+    lists: seeds Place/SchoolMaster from any values already on Student rows,
+    and Subject from the legacy free-text teachers.subject column (which the
+    model no longer declares), linking each teacher to its matching Subject
+    so nothing is lost when upgrading a deployment that predates this."""
+    from sqlalchemy import inspect, text
+    from .models import Student, Teacher, Subject, Place, SchoolMaster
+
+    for value, in db.session.query(Student.place).distinct():
+        value = (value or "").strip()
+        if value and not Place.query.filter_by(name=value).first():
+            db.session.add(Place(name=value))
+
+    for value, in db.session.query(Student.school_name).distinct():
+        value = (value or "").strip()
+        if value and not SchoolMaster.query.filter_by(name=value).first():
+            db.session.add(SchoolMaster(name=value))
+
+    db.session.commit()
+
+    inspector = inspect(db.engine)
+    teacher_columns = {c["name"] for c in inspector.get_columns("teachers")}
+    if "subject" in teacher_columns:
+        rows = db.session.execute(
+            text("SELECT id, subject FROM teachers WHERE subject IS NOT NULL AND subject != ''")
+        ).fetchall()
+        for teacher_id, subject_name in rows:
+            subject_name = (subject_name or "").strip()
+            if not subject_name:
+                continue
+            subject = Subject.query.filter_by(name=subject_name).first()
+            if subject is None:
+                subject = Subject(name=subject_name)
+                db.session.add(subject)
+                db.session.flush()
+            teacher = db.session.get(Teacher, teacher_id)
+            if teacher and subject not in teacher.subjects:
+                teacher.subjects.append(subject)
+        db.session.commit()
 
 
 def _ensure_seed_data(app):

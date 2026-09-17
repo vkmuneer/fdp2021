@@ -15,7 +15,7 @@
           <h6 class="fw-bold">{{ t.name }}</h6>
           {% if not t.active %}<span class="badge bg-secondary">Inactive</span>{% endif %}
         </div>
-        <div class="text-muted small mb-2">{{ t.subject or 'No subject set' }} &middot; {{ t.phone or 'No phone' }}</div>
+        <div class="text-muted small mb-2">{{ t.subject_names or 'No subjects set' }} &middot; {{ t.phone or 'No phone' }}</div>
         <div class="mb-2">
           {% for d in t.divisions %}
           <span class="badge bg-light text-dark border">{{ d.display_name }}</span>

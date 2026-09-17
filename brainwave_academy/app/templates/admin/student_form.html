@@ -52,21 +52,28 @@
         </div>
 
         <div class="col-md-6">
-          <label class="form-label">Place</label>
-          <input type="text" name="place" class="form-control" list="place-options" placeholder="e.g. Omassery"
-                 value="{{ student.place if student else '' }}">
-          <datalist id="place-options">
-            {% for p in places %}<option value="{{ p }}">{% endfor %}
-          </datalist>
+          <label class="form-label">
+            Place
+            {% if not places %}<span class="text-muted small">(add options under <a href="{{ url_for('admin.masters') }}">Master Data</a>)</span>{% endif %}
+          </label>
+          <select name="place" class="form-select">
+            <option value="">-- Select --</option>
+            {% for p in places %}
+            <option value="{{ p }}" {{ 'selected' if student and student.place == p }}>{{ p }}</option>
+            {% endfor %}
+          </select>
         </div>
         <div class="col-md-6">
-          <label class="form-label">School Studying In</label>
-          <input type="text" name="school_name" class="form-control" list="school-options"
-                 placeholder="e.g. Govt. Higher Secondary School - pick from the list or type a new one"
-                 value="{{ student.school_name if student else '' }}">
-          <datalist id="school-options">
-            {% for s in school_names %}<option value="{{ s }}">{% endfor %}
-          </datalist>
+          <label class="form-label">
+            School Studying In
+            {% if not school_names %}<span class="text-muted small">(add options under <a href="{{ url_for('admin.masters') }}">Master Data</a>)</span>{% endif %}
+          </label>
+          <select name="school_name" class="form-select">
+            <option value="">-- Select --</option>
+            {% for s in school_names %}
+            <option value="{{ s }}" {{ 'selected' if student and student.school_name == s }}>{{ s }}</option>
+            {% endfor %}
+          </select>
         </div>
 
         <div class="col-md-4">

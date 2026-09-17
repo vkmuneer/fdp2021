@@ -9,16 +9,22 @@ can even "Add to Home Screen" on a phone for an app-like icon).
 
 - **Admin login** and **Teacher login** with role-based access.
 - **Student management** - admission details, class & division, parent name/WhatsApp
-  number, address, place, the school the student currently studies in (with an
-  auto-suggest combobox from previously entered values), and discount/scholarship
+  number, address, place and the school the student currently studies in (both picked
+  from an admin-managed master list - see **Master Data** below), and discount/scholarship
   (recorded per student with a reason).
 - **Bulk add students from Excel** - download a ready-made `.xlsx` template, fill it in
   (only admission no., name, class, division and parent WhatsApp number are mandatory -
   everything else is optional), and upload it back to create many students at once.
-  Unknown divisions are created automatically; bad rows are skipped with a clear reason
-  shown on screen, valid rows are still added.
-- **Teacher management** - create teacher logins and assign each teacher to one or more
-  class divisions.
+  Unknown divisions/places/schools are added to the master lists automatically; bad rows
+  are skipped with a clear reason shown on screen, valid rows are still added.
+- **Teacher management** - create teacher logins, assign each teacher to one or more
+  class divisions, and record which subject(s) they teach (multi-select from the
+  **Master Data** subject list).
+- **Master Data** - a dedicated admin page (top menu) to manage the master lists used as
+  dropdowns elsewhere: **Subjects** (for teachers), and **Place** / **School** (for
+  students). Add an entry once and it becomes selectable everywhere; a subject in use by
+  a teacher can't be deleted, keeping the picker consistent as the school's own vocabulary
+  instead of free text.
 - **Class & division management** - add divisions per class and edit each class's base
   course fee. Default fees are pre-loaded: Class 9 = ₹10,000, SSLC = ₹12,500,
   +1 = ₹20,000, +2 = ₹20,000.
@@ -68,15 +74,19 @@ password immediately** (top-right menu -> your name -> Change Password).
 ### Setting up teachers and students
 
 1. Log in as admin -> **Classes** -> add divisions (e.g. A, B) for each class you need.
-2. **Teachers** -> Add Teacher -> set a username/password and tick the class divisions
-   they teach.
-3. **Students** -> Add Student -> pick the class/division; the fee defaults from the
-   class but can be overridden per student, and any discount/scholarship is entered here
-   with a reason. For adding many students at once, use **Students -> Bulk Upload**
-   instead: download the Excel template, fill in a row per student, and upload it back.
-4. Teachers log in with their own username/password and only see their assigned
+2. **Master Data** -> add the subjects your teachers handle, and the places/schools your
+   students commonly come from - these populate the dropdowns in steps 3-4 below.
+3. **Teachers** -> Add Teacher -> set a username/password, tick the class divisions and
+   subjects they handle.
+4. **Students** -> Add Student -> pick the class/division; the fee defaults from the
+   class but can be overridden per student, place/school are picked from Master Data,
+   and any discount/scholarship is entered here with a reason. For adding many students
+   at once, use **Students -> Bulk Upload** instead: download the Excel template, fill in
+   a row per student, and upload it back (new places/schools mentioned in the sheet are
+   added to Master Data automatically).
+5. Teachers log in with their own username/password and only see their assigned
    divisions, under **Attendance** and **My Students**.
-5. **Settings** -> enter the administrator's UPI ID (e.g. `yourname@okaxis`) and payee
+6. **Settings** -> enter the administrator's UPI ID (e.g. `yourname@okaxis`) and payee
    name to enable the "Pay via GPay/UPI" link in fee reminder messages.
 
 ### Enabling automatic WhatsApp sending (optional)

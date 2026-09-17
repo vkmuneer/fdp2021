@@ -15,6 +15,9 @@ from ..models import (
     Attendance,
     MessageLog,
     Settings,
+    Subject,
+    Place,
+    SchoolMaster,
 )
 from ..utils.decorators import admin_required
 from ..utils.payment import build_pay_url, fee_reminder_message
@@ -28,9 +31,32 @@ def _classes_sorted():
     return sorted(SchoolClass.query.all(), key=lambda c: c.sort_key)
 
 
-def _distinct_values(column):
-    values = {row[0].strip() for row in db.session.query(column).all() if row[0] and row[0].strip()}
-    return sorted(values)
+def _subjects_sorted():
+    return Subject.query.order_by(Subject.name).all()
+
+
+def _places_sorted():
+    return Place.query.order_by(Place.name).all()
+
+
+def _schools_sorted():
+    return SchoolMaster.query.order_by(SchoolMaster.name).all()
+
+
+def _place_options(student=None):
+    """Master list of place names, plus the student's current value if it
+    was since removed from the master (so saving unchanged never loses it)."""
+    names = [p.name for p in _places_sorted()]
+    if student and student.place and student.place not in names:
+        names.append(student.place)
+    return names
+
+
+def _school_options(student=None):
+    names = [s.name for s in _schools_sorted()]
+    if student and student.school_name and student.school_name not in names:
+        names.append(student.school_name)
+    return names
 
 
 # ---------------------------------------------------------------- dashboard
@@ -126,8 +152,8 @@ def student_form(student_id=None):
                 "admin/student_form.html",
                 student=student,
                 classes=_classes_sorted(),
-                places=_distinct_values(Student.place),
-                school_names=_distinct_values(Student.school_name),
+                places=_place_options(student),
+                school_names=_school_options(student),
             )
 
         override_raw = request.form.get("base_fee_override", "").strip()
@@ -163,8 +189,8 @@ def student_form(student_id=None):
         "admin/student_form.html",
         student=student,
         classes=_classes_sorted(),
-        places=_distinct_values(Student.place),
-        school_names=_distinct_values(Student.school_name),
+        places=_place_options(student),
+        school_names=_school_options(student),
     )
 
 
@@ -256,22 +282,22 @@ def teacher_form(teacher_id=None):
         username = request.form.get("username", "").strip()
         name = request.form.get("name", "").strip()
         phone = request.form.get("phone", "").strip()
-        subject = request.form.get("subject", "").strip()
         password = request.form.get("password", "")
         division_ids = request.form.getlist("division_ids", type=int)
+        subject_ids = request.form.getlist("subject_ids", type=int)
 
         existing_user = User.query.filter_by(username=username).first()
         if existing_user and (not teacher or existing_user.id != teacher.user_id):
             flash("That username is already taken.", "danger")
             return render_template(
-                "admin/teacher_form.html", teacher=teacher, classes=_classes_sorted()
+                "admin/teacher_form.html", teacher=teacher, classes=_classes_sorted(), subjects=_subjects_sorted()
             )
 
         if teacher is None:
             if not password:
                 flash("Password is required for a new teacher account.", "danger")
                 return render_template(
-                    "admin/teacher_form.html", teacher=teacher, classes=_classes_sorted()
+                    "admin/teacher_form.html", teacher=teacher, classes=_classes_sorted(), subjects=_subjects_sorted()
                 )
             user = User(username=username, name=name, role="teacher")
             user.set_password(password)
@@ -287,14 +313,16 @@ def teacher_form(teacher_id=None):
                 teacher.user.set_password(password)
 
         teacher.phone = phone
-        teacher.subject = subject
         teacher.divisions = Division.query.filter(Division.id.in_(division_ids)).all()
+        teacher.subjects = Subject.query.filter(Subject.id.in_(subject_ids)).all()
 
         db.session.commit()
         flash(f"Teacher {teacher.name} saved.", "success")
         return redirect(url_for("admin.teachers"))
 
-    return render_template("admin/teacher_form.html", teacher=teacher, classes=_classes_sorted())
+    return render_template(
+        "admin/teacher_form.html", teacher=teacher, classes=_classes_sorted(), subjects=_subjects_sorted()
+    )
 
 
 @admin_bp.route("/teachers/<int:teacher_id>/deactivate", methods=["POST"])
@@ -687,6 +715,8 @@ def students_bulk_upload():
         existing_admission_nos = {
             a.lower() for (a,) in db.session.query(Student.admission_no).all()
         }
+        places_by_name = {p.name.lower(): p for p in Place.query.all()}
+        schools_by_name = {s.name.lower(): s for s in SchoolMaster.query.all()}
         created = []
         errors = []
 
@@ -721,6 +751,20 @@ def students_bulk_upload():
                 db.session.flush()
                 school_class.divisions.append(division)
 
+            place_name = str(record.get("place") or "").strip()
+            if place_name and place_name.lower() not in places_by_name:
+                new_place = Place(name=place_name)
+                db.session.add(new_place)
+                db.session.flush()
+                places_by_name[place_name.lower()] = new_place
+
+            school_name = str(record.get("school_name") or "").strip()
+            if school_name and school_name.lower() not in schools_by_name:
+                new_school = SchoolMaster(name=school_name)
+                db.session.add(new_school)
+                db.session.flush()
+                schools_by_name[school_name.lower()] = new_school
+
             student = Student(
                 admission_no=admission_no,
                 name=str(record["name"]).strip(),
@@ -729,8 +773,8 @@ def students_bulk_upload():
                 parent_name=str(record.get("parent_name") or "").strip(),
                 parent_whatsapp=str(record["parent_whatsapp"]).strip(),
                 address=str(record.get("address") or "").strip(),
-                place=str(record.get("place") or "").strip(),
-                school_name=str(record.get("school_name") or "").strip(),
+                place=place_name,
+                school_name=school_name,
                 dob=_parse_flexible_date(record.get("dob")),
                 admission_date=_parse_flexible_date(record.get("admission_date")) or date.today(),
                 discount_reason=str(record.get("discount_reason") or "").strip(),
@@ -798,3 +842,100 @@ def students_bulk_upload_template():
         download_name="brainwave_students_template.xlsx",
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
+
+
+# ----------------------------------------------------------------- masters
+@admin_bp.route("/masters")
+@login_required
+@admin_required
+def masters():
+    return render_template(
+        "admin/masters.html",
+        subjects=_subjects_sorted(),
+        places=_places_sorted(),
+        schools=_schools_sorted(),
+    )
+
+
+@admin_bp.route("/masters/subjects/add", methods=["POST"])
+@login_required
+@admin_required
+def add_subject():
+    name = request.form.get("name", "").strip()
+    if not name:
+        flash("Subject name is required.", "danger")
+    elif Subject.query.filter(db.func.lower(Subject.name) == name.lower()).first():
+        flash(f"Subject '{name}' already exists.", "danger")
+    else:
+        db.session.add(Subject(name=name))
+        db.session.commit()
+        flash(f"Subject '{name}' added.", "success")
+    return redirect(url_for("admin.masters"))
+
+
+@admin_bp.route("/masters/subjects/<int:subject_id>/delete", methods=["POST"])
+@login_required
+@admin_required
+def delete_subject(subject_id):
+    subject = Subject.query.get_or_404(subject_id)
+    if subject.teachers:
+        flash(f"Cannot delete '{subject.name}' - it is assigned to {len(subject.teachers)} teacher(s).", "danger")
+    else:
+        db.session.delete(subject)
+        db.session.commit()
+        flash(f"Subject '{subject.name}' removed.", "info")
+    return redirect(url_for("admin.masters"))
+
+
+@admin_bp.route("/masters/places/add", methods=["POST"])
+@login_required
+@admin_required
+def add_place():
+    name = request.form.get("name", "").strip()
+    if not name:
+        flash("Place name is required.", "danger")
+    elif Place.query.filter(db.func.lower(Place.name) == name.lower()).first():
+        flash(f"Place '{name}' already exists.", "danger")
+    else:
+        db.session.add(Place(name=name))
+        db.session.commit()
+        flash(f"Place '{name}' added.", "success")
+    return redirect(url_for("admin.masters"))
+
+
+@admin_bp.route("/masters/places/<int:place_id>/delete", methods=["POST"])
+@login_required
+@admin_required
+def delete_place(place_id):
+    place = Place.query.get_or_404(place_id)
+    db.session.delete(place)
+    db.session.commit()
+    flash(f"Place '{place.name}' removed from the list.", "info")
+    return redirect(url_for("admin.masters"))
+
+
+@admin_bp.route("/masters/schools/add", methods=["POST"])
+@login_required
+@admin_required
+def add_school():
+    name = request.form.get("name", "").strip()
+    if not name:
+        flash("School name is required.", "danger")
+    elif SchoolMaster.query.filter(db.func.lower(SchoolMaster.name) == name.lower()).first():
+        flash(f"School '{name}' already exists.", "danger")
+    else:
+        db.session.add(SchoolMaster(name=name))
+        db.session.commit()
+        flash(f"School '{name}' added.", "success")
+    return redirect(url_for("admin.masters"))
+
+
+@admin_bp.route("/masters/schools/<int:school_id>/delete", methods=["POST"])
+@login_required
+@admin_required
+def delete_school(school_id):
+    school = SchoolMaster.query.get_or_404(school_id)
+    db.session.delete(school)
+    db.session.commit()
+    flash(f"School '{school.name}' removed from the list.", "info")
+    return redirect(url_for("admin.masters"))

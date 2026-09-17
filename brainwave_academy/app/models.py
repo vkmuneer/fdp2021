@@ -13,6 +13,48 @@ teacher_divisions = db.Table(
     db.Column("division_id", db.Integer, db.ForeignKey("divisions.id"), primary_key=True),
 )
 
+teacher_subjects = db.Table(
+    "teacher_subjects",
+    db.Column("teacher_id", db.Integer, db.ForeignKey("teachers.id"), primary_key=True),
+    db.Column("subject_id", db.Integer, db.ForeignKey("subjects.id"), primary_key=True),
+)
+
+
+class Subject(db.Model):
+    """Admin-managed master list of subjects teachers can be assigned to."""
+
+    __tablename__ = "subjects"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(80), unique=True, nullable=False)
+
+    def __repr__(self):
+        return f"<Subject {self.name}>"
+
+
+class Place(db.Model):
+    """Admin-managed master list of places/localities students are from."""
+
+    __tablename__ = "places"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), unique=True, nullable=False)
+
+    def __repr__(self):
+        return f"<Place {self.name}>"
+
+
+class SchoolMaster(db.Model):
+    """Admin-managed master list of (regular) schools students study in."""
+
+    __tablename__ = "school_masters"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(150), unique=True, nullable=False)
+
+    def __repr__(self):
+        return f"<SchoolMaster {self.name}>"
+
 
 class SchoolClass(db.Model):
     __tablename__ = "school_classes"
@@ -89,10 +131,14 @@ class Teacher(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     name = db.Column(db.String(120), nullable=False)
     phone = db.Column(db.String(20))
-    subject = db.Column(db.String(80))
     active = db.Column(db.Boolean, default=True, nullable=False)
 
     divisions = db.relationship("Division", secondary=teacher_divisions, backref="teachers")
+    subjects = db.relationship("Subject", secondary=teacher_subjects, backref="teachers")
+
+    @property
+    def subject_names(self):
+        return ", ".join(s.name for s in sorted(self.subjects, key=lambda s: s.name))
 
     def __repr__(self):
         return f"<Teacher {self.name}>"
