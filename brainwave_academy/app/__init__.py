@@ -47,11 +47,38 @@ def create_app(config_class=Config):
 
     with app.app_context():
         db.create_all()
+        _auto_migrate(app)
         _ensure_seed_data(app)
 
     register_cli(app)
 
     return app
+
+
+def _auto_migrate(app):
+    """Adds any model columns that are missing from already-existing tables.
+
+    db.create_all() only creates tables that don't exist yet - it never alters
+    ones that do, so a schema change (like adding Student.place) would crash
+    an existing deployment's database on the next boot without this. This is
+    a lightweight stand-in for a full migration tool, sufficient because our
+    schema changes are additive-only (new nullable columns/tables)."""
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(db.engine)
+    existing_tables = set(inspector.get_table_names())
+
+    for table in db.metadata.sorted_tables:
+        if table.name not in existing_tables:
+            continue  # a brand-new table - db.create_all() already built it
+        existing_columns = {col["name"] for col in inspector.get_columns(table.name)}
+        for column in table.columns:
+            if column.name in existing_columns:
+                continue
+            col_type = column.type.compile(dialect=db.engine.dialect)
+            with db.engine.begin() as conn:
+                conn.execute(text(f'ALTER TABLE "{table.name}" ADD COLUMN "{column.name}" {col_type}'))
+            app.logger.info("[auto-migrate] added column %s.%s", table.name, column.name)
 
 
 def _ensure_seed_data(app):
