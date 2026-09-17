@@ -1,0 +1,33 @@
+# systemd service so the app runs in the background and restarts automatically
+# (on crash, and on server reboot). Copy this to /etc/systemd/system/brainwave.service
+# on your VPS, then edit the paths/user below to match your setup.
+#
+# Install:
+#   sudo cp deploy/brainwave.service /etc/systemd/system/brainwave.service
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable brainwave
+#   sudo systemctl start brainwave
+#
+# After pulling code changes:
+#   sudo systemctl restart brainwave
+#
+# Check status / logs:
+#   sudo systemctl status brainwave
+#   sudo journalctl -u brainwave -f
+
+[Unit]
+Description=Brainwave Academy Flask app
+After=network.target
+
+[Service]
+# Change "brainwave" to whatever Linux user owns the app files (not root).
+User=brainwave
+Group=brainwave
+WorkingDirectory=/home/brainwave/fdp2021/brainwave_academy
+EnvironmentFile=/home/brainwave/fdp2021/brainwave_academy/.env
+ExecStart=/home/brainwave/fdp2021/brainwave_academy/.venv/bin/gunicorn -w 2 -b 127.0.0.1:8000 run:app
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

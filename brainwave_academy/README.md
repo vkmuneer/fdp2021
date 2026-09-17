@@ -130,8 +130,112 @@ either:
 
 Alternatives that also work well for a small tuition centre: **PythonAnywhere**'s free
 tier (persistent disk, manual setup via their dashboard - no blueprint automation) or
-any VPS behind Nginx + Let's Encrypt for HTTPS. Once deployed, any phone with a browser
-can use it - no native app installation is required.
+any VPS behind Nginx + Let's Encrypt for HTTPS (see below). Once deployed, any phone with
+a browser can use it - no native app installation is required.
+
+### Self-hosting on your own server/VPS (instead of Render)
+
+This gives you full control - your data lives on a disk you own, with no third-party
+platform in between. It needs a Linux **VPS** (a small cloud server with root/SSH
+access) - a few INR/USD per month from any provider (DigitalOcean, Hostinger VPS, AWS
+Lightsail, Linode, or a spare Linux machine at your office). Plain "shared hosting"
+(the cheap cPanel plans meant for WordPress) usually can't run a Python app like this -
+you need a VPS.
+
+**1. One-time server setup** (SSH into your VPS as root or a sudo user):
+
+```bash
+sudo apt update && sudo apt install -y python3 python3-venv python3-pip git nginx
+
+# Create a dedicated user to run the app (safer than running as root)
+sudo adduser brainwave
+sudo su - brainwave
+
+git clone https://github.com/vkmuneer/fdp2021.git
+cd fdp2021/brainwave_academy
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+nano .env   # set SECRET_KEY and DEFAULT_ADMIN_PASSWORD to real values, then save (Ctrl+O, Enter, Ctrl+X)
+python run.py   # quick manual test - Ctrl+C to stop once it starts without errors
+```
+
+**2. Run it permanently as a background service** (so it survives reboots/crashes) -
+exit back to your sudo user and use the systemd unit already included in the repo:
+
+```bash
+exit   # back to your sudo user
+sudo cp /home/brainwave/fdp2021/brainwave_academy/deploy/brainwave.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now brainwave
+sudo systemctl status brainwave   # should show "active (running)"
+```
+
+**3. Put Nginx in front** (so it's reachable on the normal web port 80/443, and to add
+free HTTPS) using the template also included in the repo:
+
+```bash
+sudo cp /home/brainwave/fdp2021/brainwave_academy/deploy/nginx.conf.example /etc/nginx/sites-available/brainwave
+sudo nano /etc/nginx/sites-available/brainwave   # set server_name to your domain or server IP
+sudo ln -s /etc/nginx/sites-available/brainwave /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+
+# Optional but strongly recommended if you have a domain name - free HTTPS:
+sudo apt install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d yourdomain.com
+```
+
+Your app is now live at `http://your-server-ip` (or `https://yourdomain.com` after
+certbot). No domain? Teachers can still use `http://your-server-ip` - it just won't show
+a padlock, which matters less if it's only ever used inside your own network.
+
+**Where your data is stored:** the SQLite file at
+`/home/brainwave/fdp2021/brainwave_academy/brainwave.db` on that server's own disk -
+entirely under your control, and it survives restarts/reboots (unlike Render's free
+tier). Since it's now your responsibility (not a managed platform's), back it up: the
+included `deploy/backup.sh` script copies it daily and keeps 30 days - wire it up with
+`crontab -e` as the comments in that file explain.
+
+**How to make changes whenever needed** - two options:
+
+- *Quick config-only changes* (fees, classes, UPI ID, master data) don't need any code
+  change at all - they're all editable from the Settings/Classes/Master Data pages in
+  the app itself while it's running.
+- *Actual code changes* (new features, wording, colors) follow this loop:
+  1. Edit the code on **your own computer** (see the next section for what to install).
+  2. Test it locally (`python run.py`, open `http://localhost:5000`).
+  3. Commit and push to your GitHub repo (`git add -A && git commit -m "..." && git push`).
+  4. On the server: `cd ~/fdp2021/brainwave_academy && git pull && sudo systemctl restart brainwave`.
+     (If you changed `requirements.txt`, run `.venv/bin/pip install -r requirements.txt` first.)
+
+### Setting up your own computer to edit the code
+
+To open, edit and test this project locally you need:
+
+- **Python 3.11+** - the language the app is written in.
+- **Git** - to download (`clone`) the code and push your changes back to GitHub.
+- **A code editor** - [Visual Studio Code](https://code.visualstudio.com/) (free) is the
+  most common choice; install its Python extension for syntax highlighting and
+  autocomplete. Any editor works, though (even Notepad++), since this is plain
+  Python/HTML.
+
+Then, to get a working local copy:
+
+```bash
+git clone https://github.com/vkmuneer/fdp2021.git
+cd fdp2021/brainwave_academy
+python3 -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+cp .env.example .env
+python run.py
+```
+
+Open `http://localhost:5000` to see it running locally. From here you can open the
+`brainwave_academy` folder in VS Code, make changes, and re-run `python run.py` to see
+them - the same steps as **How to make changes whenever needed** above, minus the
+server part.
 
 ## Project structure
 
