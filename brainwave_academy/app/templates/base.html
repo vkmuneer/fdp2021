@@ -42,6 +42,7 @@
             <li><a class="dropdown-item" href="{{ url_for('admin.attendance_report') }}">Attendance</a></li>
           </ul>
         </li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.exams') }}"><i class="bi bi-journal-text"></i> Examinations</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.teachers') }}">Teachers</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.classes') }}">Classes</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.masters') }}">Master Data</a></li>
@@ -50,6 +51,7 @@
         <li class="nav-item"><a class="nav-link" href="{{ url_for('teacher.dashboard') }}">Dashboard</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('teacher.attendance') }}">Attendance</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('teacher.students') }}">My Students</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('teacher.exams') }}"><i class="bi bi-journal-text"></i> Examinations</a></li>
         {% endif %}
       </ul>
       <ul class="navbar-nav">
@@ -86,12 +88,14 @@
   <a href="{{ url_for('admin.students') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('admin.student') }}"><i class="bi bi-people"></i>Students</a>
   <a href="{{ url_for('admin.attendance_report') }}" class="{{ 'active' if request.endpoint == 'admin.attendance_report' }}"><i class="bi bi-check2-square"></i>Attend.</a>
   <a href="{{ url_for('admin.finance_report') }}" class="{{ 'active' if request.endpoint and 'report' in request.endpoint and request.endpoint != 'admin.attendance_report' }}"><i class="bi bi-cash-coin"></i>Reports</a>
+  <a href="{{ url_for('admin.exams') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('admin.exam') }}"><i class="bi bi-journal-text"></i>Exams</a>
   <a href="{{ url_for('admin.messages') }}" class="{{ 'active' if request.endpoint == 'admin.messages' }}"><i class="bi bi-whatsapp"></i>Messages</a>
   {% else %}
   <a href="{{ url_for('teacher.dashboard') }}" class="{{ 'active' if request.endpoint == 'teacher.dashboard' }}"><i class="bi bi-speedometer2"></i>Home</a>
   <a href="{{ url_for('teacher.attendance') }}" class="{{ 'active' if request.endpoint == 'teacher.attendance' }}"><i class="bi bi-check2-square"></i>Attendance</a>
   <a href="{{ url_for('teacher.attendance_history') }}" class="{{ 'active' if request.endpoint == 'teacher.attendance_history' }}"><i class="bi bi-clock-history"></i>History</a>
   <a href="{{ url_for('teacher.students') }}" class="{{ 'active' if request.endpoint == 'teacher.students' }}"><i class="bi bi-people"></i>Students</a>
+  <a href="{{ url_for('teacher.exams') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('teacher.exam') }}"><i class="bi bi-journal-text"></i>Exams</a>
   {% endif %}
 </nav>
 {% endif %}

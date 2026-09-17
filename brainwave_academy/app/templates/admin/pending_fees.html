@@ -1,7 +1,13 @@
 {% extends "base.html" %}
 {% block title %}Pending Fees Report{% endblock %}
 {% block content %}
-<h4 class="text-bw-teal mb-3">Pending Fees Report</h4>
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+  <h4 class="text-bw-teal m-0">Pending Fees Report</h4>
+  <div class="no-print d-flex gap-2">
+    <button class="btn btn-outline-secondary btn-sm" onclick="window.print()"><i class="bi bi-printer"></i> Print</button>
+    <a href="{{ url_for('admin.pending_fees_report_pdf', **request.args) }}" class="btn btn-bw-primary btn-sm"><i class="bi bi-file-earmark-pdf"></i> Download PDF</a>
+  </div>
+</div>
 {% set active = 'pending' %}
 {% include "admin/_report_nav.html" %}
 
@@ -19,7 +25,7 @@
 <div class="alert alert-danger d-flex justify-content-between align-items-center flex-wrap gap-2">
   <span>Total Pending: <strong>₹{{ "{:,.0f}".format(total_pending) }}</strong> across {{ students|length }} student(s)</span>
   {% if students %}
-  <form method="post" action="{{ url_for('admin.send_bulk_fee_reminders') }}"
+  <form method="post" action="{{ url_for('admin.send_bulk_fee_reminders') }}" class="no-print"
         onsubmit="return confirm('Send a WhatsApp fee reminder (with payment link) to all {{ students|length }} parent(s) shown here?');">
     <input type="hidden" name="class_id" value="{{ selected_class_id or '' }}">
     <button type="submit" class="btn btn-sm btn-bw-primary"><i class="bi bi-whatsapp"></i> Send Reminders to All</button>

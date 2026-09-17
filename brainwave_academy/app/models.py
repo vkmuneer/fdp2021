@@ -275,3 +275,94 @@ class Settings(db.Model):
 
     def __repr__(self):
         return f"<Settings {self.academy_name}>"
+
+
+GRADE_BANDS = [
+    (90, "A+"),
+    (80, "A"),
+    (70, "B+"),
+    (60, "B"),
+    (50, "C"),
+    (35, "D"),
+    (0, "F"),
+]
+
+
+def grade_for_percentage(pct):
+    for threshold, grade in GRADE_BANDS:
+        if pct >= threshold:
+            return grade
+    return "F"
+
+
+class Exam(db.Model):
+    """An examination for a whole class (all its divisions), e.g. a term exam."""
+
+    __tablename__ = "exams"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False)
+    class_id = db.Column(db.Integer, db.ForeignKey("school_classes.id"), nullable=False)
+    exam_date = db.Column(db.Date, default=date.today, nullable=False)
+    description = db.Column(db.String(255))
+
+    school_class = db.relationship("SchoolClass", backref="exams")
+    exam_subjects = db.relationship(
+        "ExamSubject", backref="exam", cascade="all, delete-orphan", order_by="ExamSubject.id"
+    )
+
+    @property
+    def total_max_marks(self):
+        return sum(es.max_marks for es in self.exam_subjects)
+
+    def __repr__(self):
+        return f"<Exam {self.name}>"
+
+
+class ExamSubject(db.Model):
+    """One subject within an exam, with its own max/pass marks."""
+
+    __tablename__ = "exam_subjects"
+    __table_args__ = (db.UniqueConstraint("exam_id", "subject_id", name="uq_exam_subject"),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    exam_id = db.Column(db.Integer, db.ForeignKey("exams.id"), nullable=False)
+    subject_id = db.Column(db.Integer, db.ForeignKey("subjects.id"), nullable=False)
+    max_marks = db.Column(db.Float, nullable=False, default=100)
+    pass_marks = db.Column(db.Float, nullable=False, default=35)
+
+    subject = db.relationship("Subject")
+    marks = db.relationship("ExamMark", backref="exam_subject", cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return f"<ExamSubject exam={self.exam_id} subject={self.subject_id}>"
+
+
+class ExamMark(db.Model):
+    """A single student's marks in one subject of one exam."""
+
+    __tablename__ = "exam_marks"
+    __table_args__ = (db.UniqueConstraint("exam_subject_id", "student_id", name="uq_exam_subject_student"),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    exam_subject_id = db.Column(db.Integer, db.ForeignKey("exam_subjects.id"), nullable=False)
+    student_id = db.Column(db.Integer, db.ForeignKey("students.id"), nullable=False)
+    marks_obtained = db.Column(db.Float, nullable=False)
+    remarks = db.Column(db.String(255))
+    entered_by = db.Column(db.String(120))
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    student = db.relationship("Student")
+
+    @property
+    def is_pass(self):
+        return self.marks_obtained >= self.exam_subject.pass_marks
+
+    @property
+    def percentage(self):
+        if not self.exam_subject.max_marks:
+            return 0
+        return round(self.marks_obtained / self.exam_subject.max_marks * 100, 1)
+
+    def __repr__(self):
+        return f"<ExamMark student={self.student_id} marks={self.marks_obtained}>"

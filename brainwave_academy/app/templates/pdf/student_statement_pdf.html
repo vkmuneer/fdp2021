@@ -1,0 +1,42 @@
+{% extends "pdf/pdf_base.html" %}
+{% block report_title %}Fee Statement &middot; {{ student.name }} ({{ student.admission_no }}){% endblock %}
+{% block pdf_content %}
+
+<div class="summary">
+  <span>Class: <b>{{ student.school_class.name }}-{{ student.division.name }}</b></span>
+  <span>Parent: <b>{{ student.parent_name or '-' }}</b></span>
+  <span>WhatsApp: <b>{{ student.parent_whatsapp }}</b></span>
+</div>
+<div class="summary">
+  <span>Total Fee: <b>Rs. {{ "{:,.0f}".format(student.total_fee) }}</b></span>
+  <span>Paid: <b>Rs. {{ "{:,.0f}".format(student.total_paid) }}</b></span>
+  <span>Pending: <b>Rs. {{ "{:,.0f}".format(student.pending_fee) }}</b></span>
+  {% if student.discount_amount %}<span>Discount: <b>Rs. {{ "{:,.0f}".format(student.discount_amount) }}</b> ({{ student.discount_reason or '-' }})</span>{% endif %}
+</div>
+
+<table>
+  <thead>
+    <tr><th>Date</th><th>Receipt No.</th><th>Amount</th><th>Mode</th><th>Remarks</th></tr>
+  </thead>
+  <tbody>
+    {% for p in student.payments|sort(attribute='payment_date') %}
+    <tr>
+      <td>{{ p.payment_date.strftime('%d-%m-%Y') }}</td>
+      <td>{{ p.receipt_no or '-' }}</td>
+      <td>Rs. {{ "{:,.0f}".format(p.amount) }}</td>
+      <td>{{ p.mode }}</td>
+      <td>{{ p.remarks or '-' }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5" class="text-center muted">No payments recorded yet.</td></tr>
+    {% endfor %}
+  </tbody>
+  <tfoot>
+    <tr class="totals-row">
+      <td colspan="2">Total Paid</td>
+      <td>Rs. {{ "{:,.0f}".format(student.total_paid) }}</td>
+      <td colspan="2"></td>
+    </tr>
+  </tfoot>
+</table>
+{% endblock %}

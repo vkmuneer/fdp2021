@@ -1,4 +1,5 @@
 from datetime import date, datetime, timedelta
+from io import BytesIO
 
 from flask import Blueprint, render_template, redirect, url_for, flash, request, send_file
 from flask_login import login_required, current_user
@@ -18,11 +19,23 @@ from ..models import (
     Subject,
     Place,
     SchoolMaster,
+    Exam,
+    ExamSubject,
+    ExamMark,
 )
 from ..utils.decorators import admin_required
 from ..utils.payment import build_pay_url, fee_reminder_message
 from ..utils.whatsapp import send_whatsapp_message
 from ..utils.excel import build_template, parse_upload
+from ..utils.pdf import render_pdf
+from ..utils.exam_analysis import compute_exam_results, build_report_context
+
+
+def _pdf_response(template_name, filename, **context):
+    context.setdefault("settings", Settings.get())
+    buffer = render_pdf(template_name, **context)
+    return send_file(buffer, mimetype="application/pdf", as_attachment=True, download_name=filename)
+
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -200,6 +213,18 @@ def student_form(student_id=None):
 def student_detail(student_id):
     student = Student.query.get_or_404(student_id)
     return render_template("admin/student_detail.html", student=student)
+
+
+@admin_bp.route("/students/<int:student_id>/statement/pdf")
+@login_required
+@admin_required
+def student_statement_pdf(student_id):
+    student = Student.query.get_or_404(student_id)
+    return _pdf_response(
+        "pdf/student_statement_pdf.html",
+        f"fee_statement_{student.admission_no}.pdf",
+        student=student,
+    )
 
 
 @admin_bp.route("/students/<int:student_id>/deactivate", methods=["POST"])
@@ -400,29 +425,26 @@ def delete_division(division_id):
 
 
 # --------------------------------------------------------------- reports
-@admin_bp.route("/reports/finance")
-@login_required
-@admin_required
-def finance_report():
-    period = request.args.get("period", "daily")
+def _compute_finance_report(args):
+    period = args.get("period", "daily")
     today = date.today()
 
     if period == "monthly":
-        year = request.args.get("year", type=int) or today.year
-        month = request.args.get("month", type=int) or today.month
+        year = args.get("year", type=int) or today.year
+        month = args.get("month", type=int) or today.month
         start = date(year, month, 1)
         end = date(year + (1 if month == 12 else 0), 1 if month == 12 else month + 1, 1) - timedelta(days=1)
         label = start.strftime("%B %Y")
     elif period == "range":
-        start_raw = request.args.get("start")
-        end_raw = request.args.get("end")
+        start_raw = args.get("start")
+        end_raw = args.get("end")
         start = datetime.strptime(start_raw, "%Y-%m-%d").date() if start_raw else today.replace(day=1)
         end = datetime.strptime(end_raw, "%Y-%m-%d").date() if end_raw else today
         year, month = start.year, start.month
         label = f"{start.strftime('%d-%m-%Y')} to {end.strftime('%d-%m-%Y')}"
     else:
         period = "daily"
-        date_raw = request.args.get("date")
+        date_raw = args.get("date")
         start = end = datetime.strptime(date_raw, "%Y-%m-%d").date() if date_raw else today
         year, month = start.year, start.month
         label = start.strftime("%d-%m-%Y")
@@ -441,25 +463,63 @@ def finance_report():
         class_name = p.student.school_class.name
         by_class[class_name] = by_class.get(class_name, 0) + p.amount
 
-    return render_template(
-        "admin/finance_report.html",
-        period=period,
-        start=start,
-        end=end,
-        label=label,
-        year=year,
-        month=month,
-        payments=payments,
-        total=total,
-        by_mode=by_mode,
-        by_class=by_class,
+    return {
+        "period": period,
+        "start": start,
+        "end": end,
+        "label": label,
+        "year": year,
+        "month": month,
+        "payments": payments,
+        "total": total,
+        "by_mode": by_mode,
+        "by_class": by_class,
+    }
+
+
+@admin_bp.route("/reports/finance")
+@login_required
+@admin_required
+def finance_report():
+    return render_template("admin/finance_report.html", **_compute_finance_report(request.args))
+
+
+@admin_bp.route("/reports/finance/pdf")
+@login_required
+@admin_required
+def finance_report_pdf():
+    data = _compute_finance_report(request.args)
+    columns = ["Date", "Receipt", "Student", "Class", "Amount", "Mode", "Recorded By"]
+    rows = [
+        [
+            p.payment_date.strftime("%d-%m-%Y"),
+            p.receipt_no or "-",
+            p.student.name,
+            f"{p.student.school_class.name}-{p.student.division.name}",
+            f"Rs. {p.amount:,.0f}",
+            p.mode,
+            p.recorded_by or "-",
+        ]
+        for p in data["payments"]
+    ]
+    totals_row = ["", "", "", "Total", f"Rs. {data['total']:,.0f}", "", ""]
+    summary_lines = [("Total Collected", f"Rs. {data['total']:,.0f}")]
+    for mode, amount in data["by_mode"].items():
+        summary_lines.append((mode, f"Rs. {amount:,.0f}"))
+
+    return _pdf_response(
+        "pdf/generic_report_pdf.html",
+        f"fee_collection_{data['period']}_{data['start'].isoformat()}.pdf",
+        title="Fee Collection Report",
+        meta=data["label"],
+        columns=columns,
+        rows=rows,
+        totals_row=totals_row,
+        summary_lines=summary_lines,
     )
 
 
-@admin_bp.route("/reports/class-wise")
-@login_required
-@admin_required
-def class_wise_report():
+def _compute_class_wise_report():
     today = date.today()
     rows = []
     for school_class in _classes_sorted():
@@ -492,16 +552,58 @@ def class_wise_report():
                 "absent_today": absent_today,
             }
         )
+    return rows
 
-    return render_template("admin/class_report.html", rows=rows)
 
-
-@admin_bp.route("/reports/student-wise")
+@admin_bp.route("/reports/class-wise")
 @login_required
 @admin_required
-def student_wise_report():
-    class_id = request.args.get("class_id", type=int)
-    q = request.args.get("q", "").strip()
+def class_wise_report():
+    return render_template("admin/class_report.html", rows=_compute_class_wise_report())
+
+
+@admin_bp.route("/reports/class-wise/pdf")
+@login_required
+@admin_required
+def class_wise_report_pdf():
+    rows = _compute_class_wise_report()
+    columns = ["Class", "Students", "Expected Fee", "Collected", "Pending", "Present Today", "Absent Today"]
+    table_rows = [
+        [
+            f"Class {r['school_class'].name}",
+            r["student_count"],
+            f"Rs. {r['expected']:,.0f}",
+            f"Rs. {r['collected']:,.0f}",
+            f"Rs. {r['pending']:,.0f}",
+            r["present_today"],
+            r["absent_today"],
+        ]
+        for r in rows
+    ]
+    totals_row = [
+        "Total",
+        sum(r["student_count"] for r in rows),
+        f"Rs. {sum(r['expected'] for r in rows):,.0f}",
+        f"Rs. {sum(r['collected'] for r in rows):,.0f}",
+        f"Rs. {sum(r['pending'] for r in rows):,.0f}",
+        "",
+        "",
+    ]
+    return _pdf_response(
+        "pdf/generic_report_pdf.html",
+        "class_wise_report.pdf",
+        title="Class-wise Report",
+        meta=None,
+        columns=columns,
+        rows=table_rows,
+        totals_row=totals_row,
+        summary_lines=None,
+    )
+
+
+def _compute_student_wise_report(args):
+    class_id = args.get("class_id", type=int)
+    q = args.get("q", "").strip()
 
     query = Student.query.filter_by(active=True)
     if class_id:
@@ -516,7 +618,14 @@ def student_wise_report():
         "collected": sum(s.total_paid for s in student_list),
         "pending": sum(s.pending_fee for s in student_list),
     }
+    return student_list, class_id, q, totals
 
+
+@admin_bp.route("/reports/student-wise")
+@login_required
+@admin_required
+def student_wise_report():
+    student_list, class_id, q, totals = _compute_student_wise_report(request.args)
     return render_template(
         "admin/student_wise_report.html",
         students=student_list,
@@ -527,11 +636,45 @@ def student_wise_report():
     )
 
 
-@admin_bp.route("/reports/pending-fees")
+@admin_bp.route("/reports/student-wise/pdf")
 @login_required
 @admin_required
-def pending_fees_report():
-    class_id = request.args.get("class_id", type=int)
+def student_wise_report_pdf():
+    student_list, class_id, q, totals = _compute_student_wise_report(request.args)
+    columns = ["Admission No.", "Name", "Class", "Total Fee", "Paid", "Pending", "Status"]
+    rows = [
+        [
+            s.admission_no,
+            s.name,
+            f"{s.school_class.name}-{s.division.name}",
+            f"Rs. {s.total_fee:,.0f}",
+            f"Rs. {s.total_paid:,.0f}",
+            f"Rs. {s.pending_fee:,.0f}",
+            s.payment_status,
+        ]
+        for s in student_list
+    ]
+    totals_row = [
+        "", "Total", "",
+        f"Rs. {totals['expected']:,.0f}",
+        f"Rs. {totals['collected']:,.0f}",
+        f"Rs. {totals['pending']:,.0f}",
+        "",
+    ]
+    return _pdf_response(
+        "pdf/generic_report_pdf.html",
+        "student_wise_report.pdf",
+        title="Student-wise Report",
+        meta=None,
+        columns=columns,
+        rows=rows,
+        totals_row=totals_row,
+        summary_lines=None,
+    )
+
+
+def _compute_pending_fees_report(args):
+    class_id = args.get("class_id", type=int)
     query = Student.query.filter_by(active=True)
     if class_id:
         query = query.filter_by(class_id=class_id)
@@ -539,13 +682,51 @@ def pending_fees_report():
     student_list = [s for s in query.all() if s.pending_fee > 0]
     student_list.sort(key=lambda s: s.pending_fee, reverse=True)
     total_pending = sum(s.pending_fee for s in student_list)
+    return student_list, class_id, total_pending
 
+
+@admin_bp.route("/reports/pending-fees")
+@login_required
+@admin_required
+def pending_fees_report():
+    student_list, class_id, total_pending = _compute_pending_fees_report(request.args)
     return render_template(
         "admin/pending_fees.html",
         students=student_list,
         classes=_classes_sorted(),
         selected_class_id=class_id,
         total_pending=total_pending,
+    )
+
+
+@admin_bp.route("/reports/pending-fees/pdf")
+@login_required
+@admin_required
+def pending_fees_report_pdf():
+    student_list, class_id, total_pending = _compute_pending_fees_report(request.args)
+    columns = ["Admission No.", "Name", "Class", "Parent WhatsApp", "Total Fee", "Paid", "Pending"]
+    rows = [
+        [
+            s.admission_no,
+            s.name,
+            f"{s.school_class.name}-{s.division.name}",
+            s.parent_whatsapp,
+            f"Rs. {s.total_fee:,.0f}",
+            f"Rs. {s.total_paid:,.0f}",
+            f"Rs. {s.pending_fee:,.0f}",
+        ]
+        for s in student_list
+    ]
+    totals_row = ["", "", "", "Total", "", "", f"Rs. {total_pending:,.0f}"]
+    return _pdf_response(
+        "pdf/generic_report_pdf.html",
+        "pending_fees_report.pdf",
+        title="Pending Fees Report",
+        meta=None,
+        columns=columns,
+        rows=rows,
+        totals_row=totals_row,
+        summary_lines=[("Total Pending", f"Rs. {total_pending:,.0f}"), ("Students", len(student_list))],
     )
 
 
@@ -939,3 +1120,249 @@ def delete_school(school_id):
     db.session.commit()
     flash(f"School '{school.name}' removed from the list.", "info")
     return redirect(url_for("admin.masters"))
+
+
+# ------------------------------------------------------------------ exams
+@admin_bp.route("/exams")
+@login_required
+@admin_required
+def exams():
+    exam_list = Exam.query.order_by(Exam.exam_date.desc()).all()
+    return render_template("admin/exams.html", exams=exam_list, classes=_classes_sorted())
+
+
+@admin_bp.route("/exams/new", methods=["GET", "POST"])
+@login_required
+@admin_required
+def exam_form():
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        class_id = request.form.get("class_id", type=int)
+        exam_date_raw = request.form.get("exam_date")
+        description = request.form.get("description", "").strip()
+
+        if not name or not class_id:
+            flash("Exam name and class are required.", "danger")
+            return render_template("admin/exam_form.html", classes=_classes_sorted())
+
+        exam = Exam(
+            name=name,
+            class_id=class_id,
+            exam_date=datetime.strptime(exam_date_raw, "%Y-%m-%d").date() if exam_date_raw else date.today(),
+            description=description,
+        )
+        db.session.add(exam)
+        db.session.commit()
+        flash(f"Exam '{exam.name}' created. Now add its subjects below.", "success")
+        return redirect(url_for("admin.exam_detail", exam_id=exam.id))
+
+    return render_template("admin/exam_form.html", classes=_classes_sorted())
+
+
+@admin_bp.route("/exams/<int:exam_id>")
+@login_required
+@admin_required
+def exam_detail(exam_id):
+    exam = Exam.query.get_or_404(exam_id)
+    return render_template("admin/exam_detail.html", exam=exam, subjects=_subjects_sorted())
+
+
+@admin_bp.route("/exams/<int:exam_id>/delete", methods=["POST"])
+@login_required
+@admin_required
+def delete_exam(exam_id):
+    exam = Exam.query.get_or_404(exam_id)
+    db.session.delete(exam)
+    db.session.commit()
+    flash(f"Exam '{exam.name}' and all its marks have been deleted.", "info")
+    return redirect(url_for("admin.exams"))
+
+
+@admin_bp.route("/exams/<int:exam_id>/subjects/add", methods=["POST"])
+@login_required
+@admin_required
+def add_exam_subject(exam_id):
+    exam = Exam.query.get_or_404(exam_id)
+    subject_id = request.form.get("subject_id", type=int)
+    max_marks = request.form.get("max_marks", type=float) or 100
+    pass_marks = request.form.get("pass_marks", type=float) or 35
+
+    if not subject_id:
+        flash("Please choose a subject.", "danger")
+    elif ExamSubject.query.filter_by(exam_id=exam.id, subject_id=subject_id).first():
+        flash("That subject is already part of this exam.", "danger")
+    else:
+        db.session.add(ExamSubject(exam_id=exam.id, subject_id=subject_id, max_marks=max_marks, pass_marks=pass_marks))
+        db.session.commit()
+        flash("Subject added to exam.", "success")
+    return redirect(url_for("admin.exam_detail", exam_id=exam.id))
+
+
+@admin_bp.route("/exams/<int:exam_id>/subjects/<int:exam_subject_id>/delete", methods=["POST"])
+@login_required
+@admin_required
+def delete_exam_subject(exam_id, exam_subject_id):
+    exam_subject = ExamSubject.query.filter_by(id=exam_subject_id, exam_id=exam_id).first_or_404()
+    db.session.delete(exam_subject)
+    db.session.commit()
+    flash("Subject removed from exam (its marks were removed too).", "info")
+    return redirect(url_for("admin.exam_detail", exam_id=exam_id))
+
+
+def _exam_students(exam, division_id=None):
+    query = Student.query.filter_by(class_id=exam.class_id, active=True)
+    if division_id:
+        query = query.filter_by(division_id=division_id)
+    return query.order_by(Student.name).all()
+
+
+@admin_bp.route("/exams/<int:exam_id>/marks", methods=["GET", "POST"])
+@login_required
+@admin_required
+def exam_marks(exam_id):
+    exam = Exam.query.get_or_404(exam_id)
+    if not exam.exam_subjects:
+        flash("Add at least one subject to this exam before entering marks.", "warning")
+        return redirect(url_for("admin.exam_detail", exam_id=exam.id))
+
+    division_id = request.values.get("division_id", type=int) or (
+        exam.school_class.divisions[0].id if exam.school_class.divisions else None
+    )
+    exam_subject_id = request.values.get("exam_subject_id", type=int) or exam.exam_subjects[0].id
+    exam_subject = ExamSubject.query.filter_by(id=exam_subject_id, exam_id=exam.id).first_or_404()
+
+    students = _exam_students(exam, division_id)
+
+    if request.method == "POST":
+        for student in students:
+            raw = request.form.get(f"marks_{student.id}", "").strip()
+            existing = ExamMark.query.filter_by(exam_subject_id=exam_subject.id, student_id=student.id).first()
+            if raw == "":
+                if existing:
+                    db.session.delete(existing)
+                continue
+            try:
+                value = float(raw)
+            except ValueError:
+                flash(f"Ignored invalid marks for {student.name}.", "warning")
+                continue
+            value = max(0, min(value, exam_subject.max_marks))
+            if existing:
+                existing.marks_obtained = value
+                existing.entered_by = current_user.name
+            else:
+                db.session.add(
+                    ExamMark(
+                        exam_subject_id=exam_subject.id,
+                        student_id=student.id,
+                        marks_obtained=value,
+                        entered_by=current_user.name,
+                    )
+                )
+        db.session.commit()
+        flash(f"Marks saved for {exam_subject.subject.name}.", "success")
+        return redirect(url_for("admin.exam_marks", exam_id=exam.id, division_id=division_id, exam_subject_id=exam_subject.id))
+
+    existing_marks = {
+        m.student_id: m.marks_obtained
+        for m in ExamMark.query.filter_by(exam_subject_id=exam_subject.id).all()
+    }
+
+    return render_template(
+        "admin/exam_marks.html",
+        exam=exam,
+        exam_subject=exam_subject,
+        divisions=exam.school_class.divisions,
+        selected_division_id=division_id,
+        students=students,
+        existing_marks=existing_marks,
+    )
+
+
+def _exam_report_context(exam, division_id=None):
+    students = _exam_students(exam, division_id)
+    context = build_report_context(exam, students)
+    context.update({"exam": exam, "division_id": division_id, "divisions": exam.school_class.divisions})
+    return context
+
+
+@admin_bp.route("/exams/<int:exam_id>/report")
+@login_required
+@admin_required
+def exam_report(exam_id):
+    exam = Exam.query.get_or_404(exam_id)
+    division_id = request.args.get("division_id", type=int)
+    return render_template("admin/exam_report.html", **_exam_report_context(exam, division_id))
+
+
+@admin_bp.route("/exams/<int:exam_id>/report/pdf")
+@login_required
+@admin_required
+def exam_report_pdf(exam_id):
+    exam = Exam.query.get_or_404(exam_id)
+    division_id = request.args.get("division_id", type=int)
+    context = _exam_report_context(exam, division_id)
+    return _pdf_response(
+        "pdf/exam_analysis_pdf.html",
+        f"exam_analysis_{exam.name.replace(' ', '_')}.pdf",
+        **context,
+    )
+
+
+@admin_bp.route("/exams/<int:exam_id>/report/excel")
+@login_required
+@admin_required
+def exam_report_excel(exam_id):
+    exam = Exam.query.get_or_404(exam_id)
+    division_id = request.args.get("division_id", type=int)
+    students = _exam_students(exam, division_id)
+    results = compute_exam_results(exam, students)
+
+    import openpyxl
+    from openpyxl.styles import Font
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Marks"
+
+    headers = ["Rank", "Admission No.", "Name", "Class"] + [es.subject.name for es in exam.exam_subjects] + [
+        "Total", "Max", "Percentage", "Grade", "Status"
+    ]
+    ws.append(headers)
+    for cell in ws[1]:
+        cell.font = Font(bold=True)
+
+    for r in results:
+        row = [r["rank"] or "-", r["student"].admission_no, r["student"].name,
+               f"{r['student'].school_class.name}-{r['student'].division.name}"]
+        for es in exam.exam_subjects:
+            mark = r["marks_by_subject"].get(es.id)
+            row.append(mark.marks_obtained if mark else "")
+        row += [r["total_obtained"], r["total_max"], r["percentage"], r["grade"], r["status"]]
+        ws.append(row)
+
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name=f"exam_marks_{exam.name.replace(' ', '_')}.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
+
+@admin_bp.route("/exams/<int:exam_id>/students/<int:student_id>/report-card")
+@login_required
+@admin_required
+def exam_report_card_pdf(exam_id, student_id):
+    exam = Exam.query.get_or_404(exam_id)
+    student = Student.query.get_or_404(student_id)
+    result = compute_exam_results(exam, [student])[0]
+    return _pdf_response(
+        "pdf/report_card_pdf.html",
+        f"report_card_{student.admission_no}_{exam.name.replace(' ', '_')}.pdf",
+        exam=exam,
+        student=student,
+        result=result,
+    )

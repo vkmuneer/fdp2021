@@ -1,0 +1,58 @@
+{% extends "pdf/pdf_base.html" %}
+{% block report_title %}{{ exam.name }} - Performance Analysis &middot; Class {{ exam.school_class.name }}{% endblock %}
+{% block pdf_content %}
+
+<div class="summary">
+  <span>Pass: <b>{{ pass_count }}</b></span>
+  <span>Fail: <b>{{ fail_count }}</b></span>
+  <span>Incomplete: <b>{{ incomplete_count }}</b></span>
+</div>
+
+{% if charts.subject_avg %}
+<img src="{{ charts.subject_avg }}" style="width: 100%; max-width: 480px;">
+{% endif %}
+{% if charts.pass_fail %}
+<img src="{{ charts.pass_fail }}" style="width: 45%; max-width: 260px;">
+{% endif %}
+
+<table>
+  <thead><tr><th>Subject</th><th>Average %</th><th>Highest</th><th>Lowest</th><th>Pass %</th></tr></thead>
+  <tbody>
+    {% for s in stats %}
+    <tr>
+      <td>{{ s.subject }}</td>
+      <td>{{ s.average_pct }}%</td>
+      <td>{{ s.highest|int }}</td>
+      <td>{{ s.lowest|int }}</td>
+      <td>{{ s.pass_pct }}%</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<table>
+  <thead>
+    <tr>
+      <th>Rank</th><th>Adm. No.</th><th>Name</th>
+      {% for es in exam.exam_subjects %}<th>{{ es.subject.name }}</th>{% endfor %}
+      <th>Total</th><th>%</th><th>Grade</th><th>Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in results %}
+    <tr>
+      <td>{{ r.rank or '-' }}</td>
+      <td>{{ r.student.admission_no }}</td>
+      <td>{{ r.student.name }}</td>
+      {% for es in exam.exam_subjects %}
+      <td>{{ r.marks_by_subject.get(es.id).marks_obtained|int if r.marks_by_subject.get(es.id) else '-' }}</td>
+      {% endfor %}
+      <td>{{ r.total_obtained|int }}/{{ r.total_max|int }}</td>
+      <td>{{ r.percentage }}%</td>
+      <td>{{ r.grade }}</td>
+      <td>{{ r.status }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

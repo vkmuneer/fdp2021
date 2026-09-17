@@ -1,7 +1,13 @@
 {% extends "base.html" %}
 {% block title %}Fee Collection Report{% endblock %}
 {% block content %}
-<h4 class="text-bw-teal mb-3">Fee Collection Report</h4>
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+  <h4 class="text-bw-teal m-0">Fee Collection Report</h4>
+  <div class="no-print d-flex gap-2">
+    <button class="btn btn-outline-secondary btn-sm" onclick="window.print()"><i class="bi bi-printer"></i> Print</button>
+    <a href="{{ url_for('admin.finance_report_pdf', **request.args) }}" class="btn btn-bw-primary btn-sm"><i class="bi bi-file-earmark-pdf"></i> Download PDF</a>
+  </div>
+</div>
 {% set active = 'finance' %}
 {% include "admin/_report_nav.html" %}
 

@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}{{ exam.name }} - Report{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+  <div>
+    <h4 class="text-bw-teal mb-0">{{ exam.name }} - Performance Report</h4>
+    <div class="text-muted">Class {{ exam.school_class.name }}</div>
+  </div>
+  <div class="no-print d-flex gap-2 flex-wrap">
+    <button class="btn btn-outline-secondary btn-sm" onclick="window.print()"><i class="bi bi-printer"></i> Print</button>
+    <a href="{{ url_for('admin.exam_report_pdf', exam_id=exam.id, division_id=division_id or '') }}" class="btn btn-bw-primary btn-sm"><i class="bi bi-file-earmark-pdf"></i> Download PDF</a>
+    <a href="{{ url_for('admin.exam_report_excel', exam_id=exam.id, division_id=division_id or '') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-file-earmark-excel"></i> Download Excel</a>
+  </div>
+</div>
+
+<form method="get" class="row g-2 mb-3 no-print">
+  <div class="col-6 col-md-3">
+    <select name="division_id" class="form-select" onchange="this.form.submit()">
+      <option value="">All Divisions</option>
+      {% for d in divisions %}
+      <option value="{{ d.id }}" {{ 'selected' if division_id == d.id }}>{{ d.display_name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+</form>
+
+<div class="row g-3 mb-3">
+  <div class="col-4">
+    <div class="card bw-stat-card h-100"><div class="card-body">
+      <div class="small">Pass</div>
+      <div class="stat-value">{{ pass_count }}</div>
+    </div></div>
+  </div>
+  <div class="col-4">
+    <div class="card bw-card h-100"><div class="card-body">
+      <div class="small text-muted">Fail</div>
+      <div class="fs-4 fw-bold text-danger">{{ fail_count }}</div>
+    </div></div>
+  </div>
+  <div class="col-4">
+    <div class="card bw-card h-100"><div class="card-body">
+      <div class="small text-muted">Incomplete</div>
+      <div class="fs-4 fw-bold text-muted">{{ incomplete_count }}</div>
+    </div></div>
+  </div>
+</div>
+
+{% if charts %}
+<div class="row g-3 mb-3">
+  {% if charts.subject_avg %}
+  <div class="col-12 col-md-7">
+    <div class="card bw-card"><div class="card-body text-center">
+      <img src="{{ charts.subject_avg }}" style="max-width:100%;" alt="Average marks by subject">
+    </div></div>
+  </div>
+  {% endif %}
+  {% if charts.pass_fail %}
+  <div class="col-12 col-md-5">
+    <div class="card bw-card"><div class="card-body text-center">
+      <img src="{{ charts.pass_fail }}" style="max-width:100%;" alt="Pass/fail distribution">
+    </div></div>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+<div class="card bw-card mb-3">
+  <div class="card-header bg-white fw-bold text-bw-teal">Subject-wise Analysis</div>
+  <div class="table-responsive">
+    <table class="table mb-0 align-middle">
+      <thead><tr><th>Subject</th><th>Average %</th><th>Highest</th><th>Lowest</th><th>Pass %</th><th>Entered</th></tr></thead>
+      <tbody>
+        {% for s in stats %}
+        <tr>
+          <td>{{ s.subject }}</td>
+          <td>{{ s.average_pct }}%</td>
+          <td>{{ s.highest|int }}</td>
+          <td>{{ s.lowest|int }}</td>
+          <td>{{ s.pass_pct }}%</td>
+          <td>{{ s.entered_count }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="text-muted text-center">No subjects/marks yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card bw-card">
+  <div class="card-header bg-white fw-bold text-bw-teal">Student Ranking</div>
+  <div class="table-responsive">
+    <table class="table mb-0 align-middle">
+      <thead>
+        <tr>
+          <th>Rank</th><th>Admission No.</th><th>Name</th><th>Class</th>
+          {% for es in exam.exam_subjects %}<th>{{ es.subject.name }}</th>{% endfor %}
+          <th>Total</th><th>%</th><th>Grade</th><th>Status</th><th class="no-print"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in results %}
+        <tr>
+          <td>{{ r.rank or '-' }}</td>
+          <td>{{ r.student.admission_no }}</td>
+          <td>{{ r.student.name }}</td>
+          <td>{{ r.student.school_class.name }}-{{ r.student.division.name }}</td>
+          {% for es in exam.exam_subjects %}
+          <td>{{ r.marks_by_subject.get(es.id).marks_obtained|int if r.marks_by_subject.get(es.id) else '-' }}</td>
+          {% endfor %}
+          <td>{{ r.total_obtained|int }}/{{ r.total_max|int }}</td>
+          <td>{{ r.percentage }}%</td>
+          <td>{{ r.grade }}</td>
+          <td>
+            {% if r.status == 'Pass' %}<span class="badge bg-success">Pass</span>
+            {% elif r.status == 'Fail' %}<span class="badge bg-danger">Fail</span>
+            {% else %}<span class="badge bg-secondary">Incomplete</span>{% endif %}
+          </td>
+          <td class="no-print">
+            <a href="{{ url_for('admin.exam_report_card_pdf', exam_id=exam.id, student_id=r.student.id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-file-earmark-pdf"></i></a>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="{{ 9 + exam.exam_subjects|length }}" class="text-muted text-center">No students found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

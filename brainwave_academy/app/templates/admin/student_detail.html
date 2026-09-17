@@ -6,7 +6,10 @@
     <h4 class="text-bw-teal mb-0">{{ student.name }}</h4>
     <div class="text-muted">{{ student.admission_no }} &middot; Class {{ student.school_class.name }}-{{ student.division.name }}</div>
   </div>
-  <a href="{{ url_for('admin.student_form', student_id=student.id) }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-pencil"></i> Edit</a>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('admin.student_statement_pdf', student_id=student.id) }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-file-earmark-pdf"></i> Fee Statement PDF</a>
+    <a href="{{ url_for('admin.student_form', student_id=student.id) }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-pencil"></i> Edit</a>
+  </div>
 </div>
 
 <div class="row g-3 mb-3">

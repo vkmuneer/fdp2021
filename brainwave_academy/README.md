@@ -49,6 +49,17 @@ can even "Add to Home Screen" on a phone for an app-like icon).
   date-range** views (by payment mode and by class), a **pending fees** report, a
   **class-wise** summary (expected/collected/pending + today's attendance per class), a
   **student-wise** ledger report, a discount/scholarship report, and an attendance report.
+  Every report has a **Download PDF** button and a **Print** button (browser print/"Save
+  as PDF" with a clean, navbar-free layout); a student's fee statement can also be
+  downloaded as a PDF from their profile page.
+- **Examinations** - create an exam for a class, add its subjects with their own max/pass
+  marks (from the Master Data subject list), then enter marks per division/subject
+  (teachers only see/enter their own assigned subjects and divisions; admin sees
+  everything). Each exam gets an automatic **performance analysis**: pass/fail counts,
+  subject-wise average/highest/lowest/pass-rate, and a full student ranking with
+  percentage and grade - complete with bar/pie charts. Downloadable as a **PDF analysis
+  report**, a **PDF report card per student**, or an **Excel export** of the full marks
+  grid.
 - **Brainwave Academy branding** - the app uses the academy's teal-to-blue gradient
   colour theme throughout (`app/static/img/logo.svg`, `app/static/css/style.css`).
   Replace `logo.svg` with the exact official logo file at any time; the color variables
@@ -88,6 +99,10 @@ password immediately** (top-right menu -> your name -> Change Password).
    divisions, under **Attendance** and **My Students**.
 6. **Settings** -> enter the administrator's UPI ID (e.g. `yourname@okaxis`) and payee
    name to enable the "Pay via GPay/UPI" link in fee reminder messages.
+7. **Examinations** -> Create Exam -> pick the class and add its subjects with max/pass
+   marks. Teachers then enter marks for their own subject/division under their own
+   **Examinations** menu (or admin can enter any marks); either side can then open
+   **View Report** for the pass/fail analysis, charts, and PDF/Excel downloads.
 
 ### Enabling automatic WhatsApp sending (optional)
 

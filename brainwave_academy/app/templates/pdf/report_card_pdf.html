@@ -1,0 +1,41 @@
+{% extends "pdf/pdf_base.html" %}
+{% block report_title %}Report Card &middot; {{ exam.name }}{% endblock %}
+{% block pdf_content %}
+
+<div class="summary">
+  <span>Name: <b>{{ student.name }}</b></span>
+  <span>Admission No.: <b>{{ student.admission_no }}</b></span>
+  <span>Class: <b>{{ student.school_class.name }}-{{ student.division.name }}</b></span>
+</div>
+
+<table>
+  <thead><tr><th>Subject</th><th>Max Marks</th><th>Pass Marks</th><th>Marks Obtained</th><th>Result</th></tr></thead>
+  <tbody>
+    {% for es in exam.exam_subjects %}
+    {% set mark = result.marks_by_subject.get(es.id) %}
+    <tr>
+      <td>{{ es.subject.name }}</td>
+      <td>{{ es.max_marks|int }}</td>
+      <td>{{ es.pass_marks|int }}</td>
+      <td>{{ mark.marks_obtained|int if mark else '-' }}</td>
+      <td>{{ 'Pass' if mark and mark.is_pass else ('Fail' if mark else '-') }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+  <tfoot>
+    <tr class="totals-row">
+      <td>Total</td>
+      <td>{{ result.total_max|int }}</td>
+      <td></td>
+      <td>{{ result.total_obtained|int }}</td>
+      <td>{{ result.status }}</td>
+    </tr>
+  </tfoot>
+</table>
+
+<div class="summary" style="margin-top: 14px;">
+  <span>Percentage: <b>{{ result.percentage }}%</b></span>
+  <span>Grade: <b>{{ result.grade }}</b></span>
+  <span>Class Rank: <b>{{ result.rank or '-' }}</b></span>
+</div>
+{% endblock %}

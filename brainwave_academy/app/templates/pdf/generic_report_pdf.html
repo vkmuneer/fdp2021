@@ -1,0 +1,36 @@
+{% extends "pdf/pdf_base.html" %}
+{% block report_title %}{{ title }}{% if meta %} &middot; {{ meta }}{% endif %}{% endblock %}
+{% block pdf_content %}
+
+{% if summary_lines %}
+<div class="summary">
+  {% for label, value in summary_lines %}
+  <span>{{ label }}: <b>{{ value }}</b></span>
+  {% endfor %}
+</div>
+{% endif %}
+
+<table>
+  <thead>
+    <tr>
+      {% for col in columns %}<th>{{ col }}</th>{% endfor %}
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in rows %}
+    <tr>
+      {% for cell in row %}<td>{{ cell }}</td>{% endfor %}
+    </tr>
+    {% else %}
+    <tr><td colspan="{{ columns|length }}" class="text-center muted">No data.</td></tr>
+    {% endfor %}
+  </tbody>
+  {% if totals_row %}
+  <tfoot>
+    <tr class="totals-row">
+      {% for cell in totals_row %}<td>{{ cell }}</td>{% endfor %}
+    </tr>
+  </tfoot>
+  {% endif %}
+</table>
+{% endblock %}

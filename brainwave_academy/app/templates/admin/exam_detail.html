@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}{{ exam.name }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-3">
+  <div>
+    <h4 class="text-bw-teal mb-0">{{ exam.name }}</h4>
+    <div class="text-muted">Class {{ exam.school_class.name }} &middot; {{ exam.exam_date.strftime('%d-%m-%Y') }}</div>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('admin.exam_report', exam_id=exam.id) }}" class="btn btn-outline-secondary btn-sm">View Report</a>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-12 col-md-6">
+    <div class="card bw-card">
+      <div class="card-header bg-white fw-bold text-bw-teal">Subjects &amp; Marks Configuration</div>
+      <ul class="list-group list-group-flush">
+        {% for es in exam.exam_subjects %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <div>
+            <div class="fw-bold">{{ es.subject.name }}</div>
+            <div class="small text-muted">Max: {{ es.max_marks|int }} &middot; Pass: {{ es.pass_marks|int }}</div>
+          </div>
+          <div class="d-flex gap-2 align-items-center">
+            <a href="{{ url_for('admin.exam_marks', exam_id=exam.id, exam_subject_id=es.id) }}" class="btn btn-sm btn-bw-primary">Enter Marks</a>
+            <form method="post" action="{{ url_for('admin.delete_exam_subject', exam_id=exam.id, exam_subject_id=es.id) }}"
+                  onsubmit="return confirm('Remove {{ es.subject.name }} from this exam? Its marks will be deleted.');">
+              <button class="btn btn-sm btn-outline-danger"><i class="bi bi-x"></i></button>
+            </form>
+          </div>
+        </li>
+        {% else %}
+        <li class="list-group-item text-muted">No subjects added yet.</li>
+        {% endfor %}
+      </ul>
+      <div class="card-footer bg-white">
+        <form method="post" action="{{ url_for('admin.add_exam_subject', exam_id=exam.id) }}" class="row g-2">
+          <div class="col-12 col-md-5">
+            <select name="subject_id" class="form-select" required>
+              <option value="">-- Subject --</option>
+              {% for s in subjects %}
+              <option value="{{ s.id }}">{{ s.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-6 col-md-3">
+            <input type="number" name="max_marks" class="form-control" placeholder="Max marks" value="100">
+          </div>
+          <div class="col-6 col-md-2">
+            <input type="number" name="pass_marks" class="form-control" placeholder="Pass marks" value="35">
+          </div>
+          <div class="col-12 col-md-2">
+            <button class="btn btn-outline-secondary w-100">Add</button>
+          </div>
+        </form>
+        {% if not subjects %}
+        <div class="form-text mt-2">No subjects defined yet - add some under <a href="{{ url_for('admin.masters') }}">Master Data</a>.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-md-6">
+    <div class="card bw-card">
+      <div class="card-header bg-white fw-bold text-bw-teal">Divisions in Class {{ exam.school_class.name }}</div>
+      <ul class="list-group list-group-flush">
+        {% for d in exam.school_class.divisions %}
+        <li class="list-group-item">{{ d.display_name }} &middot; {{ d.students|selectattr('active')|list|length }} student(s)</li>
+        {% else %}
+        <li class="list-group-item text-muted">No divisions in this class yet.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}
