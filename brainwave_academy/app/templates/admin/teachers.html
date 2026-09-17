@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Teachers - Brainwave Academy{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="text-bw-teal m-0">Teachers</h4>
+  <a href="{{ url_for('admin.teacher_form') }}" class="btn btn-bw-primary"><i class="bi bi-plus-lg"></i> Add Teacher</a>
+</div>
+
+<div class="row g-3">
+  {% for t in teachers %}
+  <div class="col-12 col-md-6 col-lg-4">
+    <div class="card bw-card h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <h6 class="fw-bold">{{ t.name }}</h6>
+          {% if not t.active %}<span class="badge bg-secondary">Inactive</span>{% endif %}
+        </div>
+        <div class="text-muted small mb-2">{{ t.subject or 'No subject set' }} &middot; {{ t.phone or 'No phone' }}</div>
+        <div class="mb-2">
+          {% for d in t.divisions %}
+          <span class="badge bg-light text-dark border">{{ d.display_name }}</span>
+          {% else %}
+          <span class="text-muted small">No divisions assigned</span>
+          {% endfor %}
+        </div>
+        <div class="d-flex gap-2">
+          <a href="{{ url_for('admin.teacher_form', teacher_id=t.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
+          {% if t.active %}
+          <form method="post" action="{{ url_for('admin.teacher_deactivate', teacher_id=t.id) }}">
+            <button class="btn btn-sm btn-outline-danger">Deactivate</button>
+          </form>
+          {% else %}
+          <form method="post" action="{{ url_for('admin.teacher_activate', teacher_id=t.id) }}">
+            <button class="btn btn-sm btn-outline-success">Activate</button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <p class="text-muted">No teachers added yet.</p>
+  {% endfor %}
+</div>
+{% endblock %}

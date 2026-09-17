@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}My Students{% endblock %}
+{% block content %}
+<h4 class="text-bw-teal mb-3">My Students</h4>
+
+{% if divisions %}
+<form method="get" class="row g-2 mb-3">
+  <div class="col-6 col-md-3">
+    <select name="division_id" class="form-select" onchange="this.form.submit()">
+      {% for d in divisions %}
+      <option value="{{ d.id }}" {{ 'selected' if division and division.id == d.id }}>{{ d.display_name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+</form>
+
+<div class="card bw-card">
+  <ul class="list-group list-group-flush">
+    {% for s in students %}
+    <li class="list-group-item">
+      <div class="fw-bold">{{ s.name }}</div>
+      <div class="small text-muted">{{ s.admission_no }} &middot; Parent: {{ s.parent_name or '-' }} &middot; {{ s.parent_whatsapp }}</div>
+    </li>
+    {% else %}
+    <li class="list-group-item text-muted">No students in this division.</li>
+    {% endfor %}
+  </ul>
+</div>
+{% else %}
+<p class="text-muted">You have not been assigned to any class yet. Please contact the admin.</p>
+{% endif %}
+{% endblock %}

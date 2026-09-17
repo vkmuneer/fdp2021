@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - Brainwave Academy{% endblock %}
+{% block content %}
+<h4 class="text-bw-teal mb-3">Admin Dashboard</h4>
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-md-3">
+    <div class="card bw-stat-card h-100">
+      <div class="card-body">
+        <div class="small">Active Students</div>
+        <div class="stat-value">{{ student_count }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card bw-stat-card h-100">
+      <div class="card-body">
+        <div class="small">Active Teachers</div>
+        <div class="stat-value">{{ teacher_count }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card bw-stat-card h-100">
+      <div class="card-body">
+        <div class="small">Today's Collection</div>
+        <div class="stat-value">₹{{ "{:,.0f}".format(today_collection) }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card bw-stat-card h-100">
+      <div class="card-body">
+        <div class="small">Today: Present / Absent</div>
+        <div class="stat-value">{{ today_present }} / {{ today_absentees }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-md-4">
+    <div class="card bw-card h-100">
+      <div class="card-body">
+        <div class="text-muted small">Total Expected Fees</div>
+        <div class="fs-4 fw-bold text-bw-teal">₹{{ "{:,.0f}".format(total_expected) }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card bw-card h-100">
+      <div class="card-body">
+        <div class="text-muted small">Total Collected</div>
+        <div class="fs-4 fw-bold text-success">₹{{ "{:,.0f}".format(total_collected) }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card bw-card h-100">
+      <div class="card-body">
+        <div class="text-muted small">Total Pending</div>
+        <div class="fs-4 fw-bold text-danger">₹{{ "{:,.0f}".format(total_pending) }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-md-6">
+    <div class="card bw-card">
+      <div class="card-header bg-white fw-bold text-bw-teal">Top Pending Fees</div>
+      <ul class="list-group list-group-flush">
+        {% for s in pending_students %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <a href="{{ url_for('admin.student_detail', student_id=s.id) }}">{{ s.name }} <span class="text-muted small">({{ s.school_class.name }}-{{ s.division.name }})</span></a>
+          <span class="badge bg-danger rounded-pill">₹{{ "{:,.0f}".format(s.pending_fee) }}</span>
+        </li>
+        {% else %}
+        <li class="list-group-item text-muted">No pending fees. 🎉</li>
+        {% endfor %}
+      </ul>
+      <div class="card-footer bg-white">
+        <a href="{{ url_for('admin.pending_fees_report') }}" class="btn btn-sm btn-outline-secondary">View full report</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card bw-card">
+      <div class="card-header bg-white fw-bold text-bw-teal">Classes</div>
+      <ul class="list-group list-group-flush">
+        {% for c in classes %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <span>Class {{ c.name }}</span>
+          <span class="text-muted">Base fee ₹{{ "{:,.0f}".format(c.base_fee) }} &middot; {{ c.divisions|length }} division(s)</span>
+        </li>
+        {% endfor %}
+      </ul>
+      <div class="card-footer bg-white">
+        <a href="{{ url_for('admin.classes') }}" class="btn btn-sm btn-outline-secondary">Manage classes</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

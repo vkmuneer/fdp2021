@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Pending Fees Report{% endblock %}
+{% block content %}
+<h4 class="text-bw-teal mb-3">Pending Fees Report</h4>
+
+<ul class="nav nav-pills mb-3">
+  <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.daily_report') }}">Daily Collection</a></li>
+  <li class="nav-item"><a class="nav-link active" href="{{ url_for('admin.pending_fees_report') }}">Pending Fees</a></li>
+  <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.discount_report') }}">Discounts</a></li>
+  <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.attendance_report') }}">Attendance</a></li>
+</ul>
+
+<form method="get" class="row g-2 mb-3">
+  <div class="col-6 col-md-3">
+    <select name="class_id" class="form-select" onchange="this.form.submit()">
+      <option value="">All Classes</option>
+      {% for c in classes %}
+      <option value="{{ c.id }}" {{ 'selected' if selected_class_id == c.id }}>{{ c.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+</form>
+
+<div class="alert alert-danger">Total Pending: <strong>₹{{ "{:,.0f}".format(total_pending) }}</strong> across {{ students|length }} student(s)</div>
+
+<div class="card bw-card">
+  <div class="table-responsive">
+    <table class="table mb-0 align-middle">
+      <thead><tr><th>Admission No.</th><th>Name</th><th>Class</th><th>Parent WhatsApp</th><th>Total Fee</th><th>Paid</th><th>Pending</th></tr></thead>
+      <tbody>
+        {% for s in students %}
+        <tr>
+          <td>{{ s.admission_no }}</td>
+          <td><a href="{{ url_for('admin.student_detail', student_id=s.id) }}">{{ s.name }}</a></td>
+          <td>{{ s.school_class.name }}-{{ s.division.name }}</td>
+          <td>
+            <a href="https://wa.me/{{ s.parent_whatsapp }}" target="_blank" class="text-decoration-none">
+              {{ s.parent_whatsapp }} <i class="bi bi-whatsapp text-success"></i>
+            </a>
+          </td>
+          <td>₹{{ "{:,.0f}".format(s.total_fee) }}</td>
+          <td>₹{{ "{:,.0f}".format(s.total_paid) }}</td>
+          <td class="text-danger fw-bold">₹{{ "{:,.0f}".format(s.pending_fee) }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="text-muted text-center">No pending fees. 🎉</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

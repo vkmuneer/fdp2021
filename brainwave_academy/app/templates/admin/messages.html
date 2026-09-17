@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Absence Messages{% endblock %}
+{% block content %}
+<h4 class="text-bw-teal mb-3">Absence WhatsApp Messages</h4>
+
+{% if pending_count %}
+<div class="alert alert-warning">
+  <i class="bi bi-whatsapp"></i> {{ pending_count }} message(s) need to be sent manually - tap "Send on WhatsApp" below.
+</div>
+{% endif %}
+
+<div class="d-md-none">
+  {% for log in logs %}
+  <div class="card bw-card mb-2">
+    <div class="card-body py-2 px-3">
+      <div class="d-flex justify-content-between">
+        <div class="fw-bold">{{ log.student.name if log.student else 'Unknown' }}</div>
+        {% if log.status == 'sent' %}<span class="badge bg-success">Sent</span>
+        {% elif log.status == 'failed' %}<span class="badge bg-danger">Failed</span>
+        {% else %}<span class="badge bg-warning text-dark">Manual</span>{% endif %}
+      </div>
+      <div class="small text-muted">{{ log.date.strftime('%d-%m-%Y') if log.date else '' }} &middot; {{ log.phone }}</div>
+      <div class="small mt-1">{{ log.message }}</div>
+      {% if log.status == 'manual' %}
+      <div class="mt-2 d-flex gap-2">
+        <a href="{{ log.manual_link }}" target="_blank" class="btn btn-sm btn-success"><i class="bi bi-whatsapp"></i> Send on WhatsApp</a>
+        <form method="post" action="{{ url_for('admin.mark_message_sent', message_id=log.id) }}">
+          <button class="btn btn-sm btn-outline-secondary">Mark Sent</button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% else %}
+  <p class="text-muted">No messages yet.</p>
+  {% endfor %}
+</div>
+
+<div class="d-none d-md-block card bw-card">
+  <div class="table-responsive">
+    <table class="table mb-0 align-middle">
+      <thead><tr><th>Date</th><th>Student</th><th>Phone</th><th>Message</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        {% for log in logs %}
+        <tr>
+          <td>{{ log.date.strftime('%d-%m-%Y') if log.date else '' }}</td>
+          <td>{{ log.student.name if log.student else 'Unknown' }}</td>
+          <td>{{ log.phone }}</td>
+          <td class="small">{{ log.message }}</td>
+          <td>
+            {% if log.status == 'sent' %}<span class="badge bg-success">Sent</span>
+            {% elif log.status == 'failed' %}<span class="badge bg-danger">Failed</span>
+            {% else %}<span class="badge bg-warning text-dark">Manual</span>{% endif %}
+          </td>
+          <td>
+            {% if log.status == 'manual' %}
+            <a href="{{ log.manual_link }}" target="_blank" class="btn btn-sm btn-success"><i class="bi bi-whatsapp"></i></a>
+            <form method="post" action="{{ url_for('admin.mark_message_sent', message_id=log.id) }}" class="d-inline">
+              <button class="btn btn-sm btn-outline-secondary">Mark Sent</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="text-muted text-center">No messages yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

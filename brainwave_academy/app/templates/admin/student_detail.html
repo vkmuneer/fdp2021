@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}{{ student.name }} - Brainwave Academy{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-3">
+  <div>
+    <h4 class="text-bw-teal mb-0">{{ student.name }}</h4>
+    <div class="text-muted">{{ student.admission_no }} &middot; Class {{ student.school_class.name }}-{{ student.division.name }}</div>
+  </div>
+  <a href="{{ url_for('admin.student_form', student_id=student.id) }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-pencil"></i> Edit</a>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-md-3">
+    <div class="card bw-card h-100"><div class="card-body">
+      <div class="small text-muted">Total Fee</div>
+      <div class="fs-5 fw-bold">₹{{ "{:,.0f}".format(student.total_fee) }}</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card bw-card h-100"><div class="card-body">
+      <div class="small text-muted">Paid</div>
+      <div class="fs-5 fw-bold text-success">₹{{ "{:,.0f}".format(student.total_paid) }}</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card bw-card h-100"><div class="card-body">
+      <div class="small text-muted">Pending</div>
+      <div class="fs-5 fw-bold text-danger">₹{{ "{:,.0f}".format(student.pending_fee) }}</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card bw-card h-100"><div class="card-body">
+      <div class="small text-muted">Discount</div>
+      <div class="fs-5 fw-bold">₹{{ "{:,.0f}".format(student.discount_amount) }}</div>
+      {% if student.discount_reason %}<div class="small text-muted">{{ student.discount_reason }}</div>{% endif %}
+    </div></div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-md-5">
+    <div class="card bw-card mb-3">
+      <div class="card-header bg-white fw-bold text-bw-teal">Parent / Guardian</div>
+      <div class="card-body">
+        <p class="mb-1"><strong>Name:</strong> {{ student.parent_name or '-' }}</p>
+        <p class="mb-1"><strong>WhatsApp:</strong> {{ student.parent_whatsapp }}</p>
+        <p class="mb-0"><strong>Address:</strong> {{ student.address or '-' }}</p>
+      </div>
+    </div>
+
+    {% if student.pending_fee > 0 %}
+    <div class="card bw-card mb-3">
+      <div class="card-header bg-white fw-bold text-bw-teal">Record a Payment</div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('admin.add_payment', student_id=student.id) }}">
+          <div class="mb-2">
+            <label class="form-label">Amount (₹)</label>
+            <input type="number" step="0.01" name="amount" class="form-control" required max="{{ student.pending_fee }}">
+            <div class="form-text">Pending balance: ₹{{ "{:,.0f}".format(student.pending_fee) }}</div>
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Payment Date</label>
+            <input type="date" name="payment_date" class="form-control" value="{{ today.isoformat() }}">
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Mode</label>
+            <select name="mode" class="form-select">
+              <option>Cash</option>
+              <option>UPI</option>
+              <option>Bank Transfer</option>
+              <option>Cheque</option>
+            </select>
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Remarks</label>
+            <input type="text" name="remarks" class="form-control" placeholder="e.g. Installment 2 of 3">
+          </div>
+          <button type="submit" class="btn btn-bw-primary w-100">Add Payment</button>
+        </form>
+      </div>
+    </div>
+    {% else %}
+    <div class="alert alert-success">All fees have been paid in full. 🎉</div>
+    {% endif %}
+  </div>
+
+  <div class="col-md-7">
+    <div class="card bw-card">
+      <div class="card-header bg-white fw-bold text-bw-teal">Payment History (Installments)</div>
+      <div class="table-responsive">
+        <table class="table mb-0 align-middle">
+          <thead><tr><th>Date</th><th>Receipt</th><th>Amount</th><th>Mode</th><th>Remarks</th><th></th></tr></thead>
+          <tbody>
+            {% for p in student.payments|sort(attribute='payment_date', reverse=True) %}
+            <tr>
+              <td>{{ p.payment_date.strftime('%d-%m-%Y') }}</td>
+              <td>{{ p.receipt_no or '-' }}</td>
+              <td>₹{{ "{:,.0f}".format(p.amount) }}</td>
+              <td>{{ p.mode }}</td>
+              <td>{{ p.remarks or '-' }}</td>
+              <td>
+                <form method="post" action="{{ url_for('admin.delete_payment', payment_id=p.id) }}"
+                      onsubmit="return confirm('Remove this payment entry?');">
+                  <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                </form>
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" class="text-muted text-center">No payments recorded yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card bw-card mt-3">
+      <div class="card-header bg-white fw-bold text-bw-teal">Recent Attendance</div>
+      <div class="table-responsive">
+        <table class="table mb-0 align-middle">
+          <thead><tr><th>Date</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for a in student.attendances|sort(attribute='date', reverse=True) %}
+            {% if loop.index <= 10 %}
+            <tr>
+              <td>{{ a.date.strftime('%d-%m-%Y') }}</td>
+              <td>
+                {% if a.status == 'present' %}
+                <span class="badge bg-success">Present</span>
+                {% else %}
+                <span class="badge bg-danger">Absent</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endif %}
+            {% else %}
+            <tr><td colspan="2" class="text-muted text-center">No attendance recorded yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<form method="post" action="{{ url_for('admin.student_deactivate', student_id=student.id) }}" class="mt-3"
+      onsubmit="return confirm('Deactivate this student? They will be hidden from active lists.');">
+  <button class="btn btn-outline-danger btn-sm"><i class="bi bi-person-dash"></i> Deactivate Student</button>
+</form>
+{% endblock %}

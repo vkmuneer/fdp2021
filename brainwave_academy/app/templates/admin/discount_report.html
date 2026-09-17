@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Discount / Scholarship Report{% endblock %}
+{% block content %}
+<h4 class="text-bw-teal mb-3">Discount / Scholarship Report</h4>
+
+<ul class="nav nav-pills mb-3">
+  <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.daily_report') }}">Daily Collection</a></li>
+  <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.pending_fees_report') }}">Pending Fees</a></li>
+  <li class="nav-item"><a class="nav-link active" href="{{ url_for('admin.discount_report') }}">Discounts</a></li>
+  <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.attendance_report') }}">Attendance</a></li>
+</ul>
+
+<div class="alert alert-info">Total discounts/scholarships granted: <strong>₹{{ "{:,.0f}".format(total_discount) }}</strong></div>
+
+<div class="card bw-card">
+  <div class="table-responsive">
+    <table class="table mb-0 align-middle">
+      <thead><tr><th>Admission No.</th><th>Name</th><th>Class</th><th>Discount</th><th>Reason</th></tr></thead>
+      <tbody>
+        {% for s in students %}
+        <tr>
+          <td>{{ s.admission_no }}</td>
+          <td><a href="{{ url_for('admin.student_detail', student_id=s.id) }}">{{ s.name }}</a></td>
+          <td>{{ s.school_class.name }}-{{ s.division.name }}</td>
+          <td>₹{{ "{:,.0f}".format(s.discount_amount) }}</td>
+          <td>{{ s.discount_reason or '-' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="text-muted text-center">No discounts granted yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

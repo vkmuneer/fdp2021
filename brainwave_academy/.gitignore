@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.env
+brainwave.db
+instance/
+.venv/
+venv/

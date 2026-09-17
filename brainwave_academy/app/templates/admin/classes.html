@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Classes - Brainwave Academy{% endblock %}
+{% block content %}
+<h4 class="text-bw-teal mb-3">Classes &amp; Divisions</h4>
+
+<div class="row g-3">
+  {% for c in classes %}
+  <div class="col-12 col-md-6">
+    <div class="card bw-card h-100">
+      <div class="card-header bg-white fw-bold">Class {{ c.name }}</div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('admin.update_class_fee', class_id=c.id) }}" class="row g-2 align-items-end mb-3">
+          <div class="col-8">
+            <label class="form-label small">Base Course Fee (₹)</label>
+            <input type="number" step="0.01" name="base_fee" class="form-control" value="{{ c.base_fee }}">
+          </div>
+          <div class="col-4">
+            <button class="btn btn-bw-primary w-100">Update</button>
+          </div>
+        </form>
+
+        <div class="mb-2 fw-bold small text-muted">Divisions</div>
+        <div class="d-flex flex-wrap gap-2 mb-3">
+          {% for d in c.divisions %}
+          <form method="post" action="{{ url_for('admin.delete_division', division_id=d.id) }}"
+                onsubmit="return confirm('Delete division {{ d.name }}?');">
+            <button class="btn btn-sm btn-outline-secondary">
+              {{ d.name }} ({{ d.students|length }}) <i class="bi bi-x"></i>
+            </button>
+          </form>
+          {% else %}
+          <span class="text-muted small">No divisions yet.</span>
+          {% endfor %}
+        </div>
+
+        <form method="post" action="{{ url_for('admin.add_division', class_id=c.id) }}" class="row g-2">
+          <div class="col-8">
+            <input type="text" name="name" class="form-control" placeholder="New division e.g. B" maxlength="10">
+          </div>
+          <div class="col-4">
+            <button class="btn btn-outline-secondary w-100">Add</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

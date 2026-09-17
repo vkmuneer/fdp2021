@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Teacher Dashboard{% endblock %}
+{% block content %}
+<h4 class="text-bw-teal mb-3">Welcome, {{ current_user.name }}</h4>
+
+<div class="row g-3">
+  {% for item in summary %}
+  <div class="col-12 col-md-6">
+    <div class="card bw-card h-100">
+      <div class="card-body">
+        <h6 class="fw-bold">{{ item.division.display_name }}</h6>
+        <p class="text-muted mb-2">{{ item.student_count }} student(s)</p>
+        <p class="mb-3">
+          {% if item.marked_today >= item.student_count and item.student_count > 0 %}
+          <span class="badge bg-success">Attendance marked for today</span>
+          {% else %}
+          <span class="badge bg-warning text-dark">Attendance pending for today</span>
+          {% endif %}
+        </p>
+        <a href="{{ url_for('teacher.attendance', division_id=item.division.id) }}" class="btn btn-bw-primary btn-sm">
+          <i class="bi bi-check2-square"></i> Mark Attendance
+        </a>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <p class="text-muted">You have not been assigned to any class yet. Please contact the admin.</p>
+  {% endfor %}
+</div>
+{% endblock %}

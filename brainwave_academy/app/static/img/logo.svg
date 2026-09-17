@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 340" role="img" aria-label="Brainwave Academy logo">
+  <defs>
+    <linearGradient id="bwGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#36b6a8"/>
+      <stop offset="100%" stop-color="#1c3f63"/>
+    </linearGradient>
+  </defs>
+  <circle cx="150" cy="120" r="105" fill="url(#bwGrad)"/>
+  <text x="150" y="146" font-family="'Brush Script MT', 'Segoe Script', cursive" font-size="80" font-style="italic"
+        fill="#ffffff" text-anchor="middle" opacity="0.95">bw</text>
+  <text x="150" y="255" font-family="'Segoe UI', Arial, sans-serif" font-size="52" font-weight="700"
+        fill="#155e52" text-anchor="middle">brainwave</text>
+  <text x="150" y="285" font-family="'Segoe UI', Arial, sans-serif" font-size="20" font-weight="600" letter-spacing="4"
+        fill="#6b7280" text-anchor="middle">ACADEMY</text>
+  <text x="150" y="312" font-family="'Segoe UI', Arial, sans-serif" font-size="18"
+        fill="#6b7280" text-anchor="middle">Mukkam Road, OMASSERY</text>
+</svg>

@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit' if student else 'Add' }} Student{% endblock %}
+{% block content %}
+<h4 class="text-bw-teal mb-3">{{ 'Edit' if student else 'Add' }} Student</h4>
+<div class="card bw-card">
+  <div class="card-body">
+    <form method="post">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label">Admission No. *</label>
+          <input type="text" name="admission_no" class="form-control" required
+                 value="{{ student.admission_no if student else '' }}">
+        </div>
+        <div class="col-md-8">
+          <label class="form-label">Student Name *</label>
+          <input type="text" name="name" class="form-control" required
+                 value="{{ student.name if student else '' }}">
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">Class &amp; Division *</label>
+          <select name="division_id" class="form-select" required>
+            {% for c in classes %}
+              {% for d in c.divisions %}
+              <option value="{{ d.id }}" {{ 'selected' if student and student.division_id == d.id }}>
+                {{ c.name }} - {{ d.name }} (Base fee ₹{{ "{:,.0f}".format(c.base_fee) }})
+              </option>
+              {% endfor %}
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Admission Date</label>
+          <input type="date" name="admission_date" class="form-control"
+                 value="{{ student.admission_date.isoformat() if student and student.admission_date else '' }}">
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">Parent / Guardian Name</label>
+          <input type="text" name="parent_name" class="form-control"
+                 value="{{ student.parent_name if student else '' }}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Parent WhatsApp Number *</label>
+          <input type="text" name="parent_whatsapp" class="form-control" required placeholder="e.g. 9847012345"
+                 value="{{ student.parent_whatsapp if student else '' }}">
+        </div>
+
+        <div class="col-12">
+          <label class="form-label">Address</label>
+          <input type="text" name="address" class="form-control" value="{{ student.address if student else '' }}">
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label">Date of Birth</label>
+          <input type="date" name="dob" class="form-control"
+                 value="{{ student.dob.isoformat() if student and student.dob else '' }}">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Fee Override (optional)</label>
+          <input type="number" step="0.01" name="base_fee_override" class="form-control"
+                 placeholder="Leave blank to use class fee"
+                 value="{{ student.base_fee_override if student and student.base_fee_override is not none else '' }}">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Discount / Scholarship (₹)</label>
+          <input type="number" step="0.01" name="discount_amount" class="form-control"
+                 value="{{ student.discount_amount if student else 0 }}">
+        </div>
+        <div class="col-12">
+          <label class="form-label">Discount / Scholarship Reason</label>
+          <input type="text" name="discount_reason" class="form-control" placeholder="e.g. Sibling discount, merit scholarship"
+                 value="{{ student.discount_reason if student else '' }}">
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <button type="submit" class="btn btn-bw-primary">Save Student</button>
+        <a href="{{ url_for('admin.students') }}" class="btn btn-outline-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

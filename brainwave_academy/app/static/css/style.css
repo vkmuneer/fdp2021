@@ -1,0 +1,148 @@
+:root {
+  --bw-teal: #36b6a8;
+  --bw-blue: #1c3f63;
+  --bw-dark-teal: #155e52;
+  --bw-grey: #6b7280;
+  --bw-bg: #f4f8f8;
+  --bw-gradient: linear-gradient(135deg, var(--bw-teal) 0%, var(--bw-blue) 100%);
+}
+
+body {
+  background-color: var(--bw-bg);
+  padding-bottom: 76px; /* space for mobile bottom nav */
+}
+
+.navbar-brand-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.navbar-brand-wrap img {
+  height: 36px;
+  width: 36px;
+}
+
+.bw-navbar {
+  background: var(--bw-gradient);
+}
+
+.bw-navbar .navbar-brand,
+.bw-navbar .nav-link {
+  color: #ffffff !important;
+}
+
+.bw-navbar .nav-link.active {
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.bw-card {
+  border: none;
+  border-radius: 14px;
+  box-shadow: 0 2px 10px rgba(28, 63, 99, 0.08);
+}
+
+.bw-stat-card {
+  border-radius: 14px;
+  color: #fff;
+  background: var(--bw-gradient);
+}
+
+.bw-stat-card .stat-value {
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.btn-bw-primary {
+  background: var(--bw-gradient);
+  border: none;
+  color: #fff;
+}
+
+.btn-bw-primary:hover {
+  opacity: 0.92;
+  color: #fff;
+}
+
+.text-bw-teal {
+  color: var(--bw-dark-teal) !important;
+}
+
+.badge-paid {
+  background-color: #1f9d55;
+}
+
+.badge-partial {
+  background-color: #d97706;
+}
+
+.badge-unpaid {
+  background-color: #dc2626;
+}
+
+/* Mobile bottom navigation */
+.bw-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  background: #ffffff;
+  border-top: 1px solid #e5e7eb;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.06);
+  z-index: 1030;
+}
+
+.bw-bottom-nav a {
+  flex: 1;
+  text-align: center;
+  padding: 0.5rem 0.25rem;
+  font-size: 0.72rem;
+  color: var(--bw-grey);
+  text-decoration: none;
+}
+
+.bw-bottom-nav a.active {
+  color: var(--bw-dark-teal);
+  font-weight: 700;
+}
+
+.bw-bottom-nav i {
+  display: block;
+  font-size: 1.15rem;
+  margin-bottom: 2px;
+}
+
+@media (min-width: 768px) {
+  .bw-bottom-nav {
+    display: none;
+  }
+  body {
+    padding-bottom: 0;
+  }
+}
+
+.attendance-row.absent {
+  background-color: #fef2f2;
+}
+
+.attendance-row.present {
+  background-color: #f0fdf4;
+}
+
+.login-card {
+  max-width: 380px;
+  margin: 6vh auto;
+}
+
+.login-logo {
+  width: 110px;
+  height: auto;
+  display: block;
+  margin: 0 auto 1rem;
+}
+
+.table-responsive-cards .card {
+  border-radius: 12px;
+}

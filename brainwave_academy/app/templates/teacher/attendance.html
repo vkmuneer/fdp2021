@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Mark Attendance{% endblock %}
+{% block content %}
+<h4 class="text-bw-teal mb-3"><i class="bi bi-check2-square"></i> Mark Attendance</h4>
+
+{% if divisions %}
+<form method="get" class="row g-2 mb-3">
+  <div class="col-6 col-md-3">
+    <select name="division_id" class="form-select" onchange="this.form.submit()">
+      {% for d in divisions %}
+      <option value="{{ d.id }}" {{ 'selected' if division and division.id == d.id }}>{{ d.display_name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-6 col-md-3">
+    <input type="date" name="att_date" class="form-control" value="{{ att_date.isoformat() }}" onchange="this.form.submit()">
+  </div>
+</form>
+
+{% if students %}
+<form method="post" id="attendanceForm">
+  <input type="hidden" name="division_id" value="{{ division.id }}">
+  <input type="hidden" name="att_date" value="{{ att_date.isoformat() }}">
+
+  <div class="d-flex gap-2 mb-3">
+    <button type="button" class="btn btn-sm btn-outline-success" onclick="setAll(true)">Mark All Present</button>
+    <button type="button" class="btn btn-sm btn-outline-danger" onclick="setAll(false)">Mark All Absent</button>
+  </div>
+
+  <div class="card bw-card">
+    <ul class="list-group list-group-flush">
+      {% for s in students %}
+      {% set is_present = existing_map.get(s.id, 'present') == 'present' %}
+      <li class="list-group-item attendance-row {{ 'present' if is_present else 'absent' }} d-flex justify-content-between align-items-center" id="row-{{ s.id }}">
+        <div>
+          <div class="fw-bold">{{ s.name }}</div>
+          <div class="small text-muted">{{ s.admission_no }}</div>
+        </div>
+        <div class="form-check form-switch fs-4">
+          <input class="form-check-input student-check" type="checkbox" role="switch"
+                 name="present_{{ s.id }}" id="chk{{ s.id }}"
+                 onchange="toggleRow({{ s.id }})" {{ 'checked' if is_present }}>
+          <label class="form-check-label small" for="chk{{ s.id }}" id="label{{ s.id }}">
+            {{ 'Present ✔' if is_present else 'Absent ✘' }}
+          </label>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <button type="submit" class="btn btn-bw-primary btn-lg w-100 mt-3">
+    <i class="bi bi-save"></i> Save Attendance
+  </button>
+  <div class="form-text mt-2">Absent students' parents will automatically get a WhatsApp notification (or a tap-to-send link for the office, if auto-sending isn't configured).</div>
+</form>
+
+<script>
+function toggleRow(id) {
+  const chk = document.getElementById('chk' + id);
+  const row = document.getElementById('row-' + id);
+  const label = document.getElementById('label' + id);
+  if (chk.checked) {
+    row.classList.remove('absent');
+    row.classList.add('present');
+    label.textContent = 'Present ✔';
+  } else {
+    row.classList.remove('present');
+    row.classList.add('absent');
+    label.textContent = 'Absent ✘';
+  }
+}
+function setAll(present) {
+  document.querySelectorAll('.student-check').forEach(function (chk) {
+    chk.checked = present;
+    const id = chk.id.replace('chk', '');
+    toggleRow(id);
+  });
+}
+</script>
+{% else %}
+<p class="text-muted">No active students in this division.</p>
+{% endif %}
+
+{% else %}
+<p class="text-muted">You have not been assigned to any class yet. Please contact the admin.</p>
+{% endif %}
+{% endblock %}

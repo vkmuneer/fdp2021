@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Daily Finance Report{% endblock %}
+{% block content %}
+<h4 class="text-bw-teal mb-3">Daily Finance Report</h4>
+
+<ul class="nav nav-pills mb-3">
+  <li class="nav-item"><a class="nav-link active" href="{{ url_for('admin.daily_report') }}">Daily Collection</a></li>
+  <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.pending_fees_report') }}">Pending Fees</a></li>
+  <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.discount_report') }}">Discounts</a></li>
+  <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.attendance_report') }}">Attendance</a></li>
+</ul>
+
+<form method="get" class="row g-2 mb-3">
+  <div class="col-6 col-md-3">
+    <input type="date" name="date" class="form-control" value="{{ report_date.isoformat() }}" onchange="this.form.submit()">
+  </div>
+</form>
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-md-3">
+    <div class="card bw-stat-card h-100"><div class="card-body">
+      <div class="small">Total Collected</div>
+      <div class="stat-value">₹{{ "{:,.0f}".format(total) }}</div>
+    </div></div>
+  </div>
+  {% for mode, amount in by_mode.items() %}
+  <div class="col-6 col-md-3">
+    <div class="card bw-card h-100"><div class="card-body">
+      <div class="small text-muted">{{ mode }}</div>
+      <div class="fs-5 fw-bold">₹{{ "{:,.0f}".format(amount) }}</div>
+    </div></div>
+  </div>
+  {% endfor %}
+</div>
+
+{% if by_class %}
+<div class="mb-3">
+  <span class="fw-bold text-muted small">By class:</span>
+  {% for class_name, amount in by_class.items() %}
+  <span class="badge bg-light text-dark border">{{ class_name }}: ₹{{ "{:,.0f}".format(amount) }}</span>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="card bw-card">
+  <div class="table-responsive">
+    <table class="table mb-0 align-middle">
+      <thead><tr><th>Receipt</th><th>Student</th><th>Class</th><th>Amount</th><th>Mode</th><th>Recorded By</th></tr></thead>
+      <tbody>
+        {% for p in payments %}
+        <tr>
+          <td>{{ p.receipt_no or '-' }}</td>
+          <td><a href="{{ url_for('admin.student_detail', student_id=p.student.id) }}">{{ p.student.name }}</a></td>
+          <td>{{ p.student.school_class.name }}-{{ p.student.division.name }}</td>
+          <td>₹{{ "{:,.0f}".format(p.amount) }}</td>
+          <td>{{ p.mode }}</td>
+          <td>{{ p.recorded_by or '-' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="text-muted text-center">No payments recorded on this date.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
