@@ -76,16 +76,33 @@ No code changes are needed - the app detects these and switches to automatic sen
 
 ### Deploying so it's reachable from anywhere
 
-For real use (not just your home Wi-Fi), run it behind a production server, e.g.:
+The repo already includes a `Procfile` (`web: gunicorn run:app`) and a `render.yaml`
+blueprint at the repo root, so it deploys to [Render](https://render.com) with almost no
+manual setup:
 
-```bash
-pip install gunicorn
-gunicorn -w 2 -b 0.0.0.0:8000 run:app
-```
+1. Push this repo to your own GitHub account (or use it directly if it's already there).
+2. On Render: **New +** -> **Blueprint** -> connect the repo -> pick the branch that has
+   this code -> Render detects `render.yaml` and shows one service, `brainwave-academy`.
+3. Click **Apply**. When prompted, set `DEFAULT_ADMIN_PASSWORD` (required) and leave
+   `DATABASE_URL`, `TWILIO_*` blank unless you have them.
+4. After the build finishes, Render gives you a public URL like
+   `https://brainwave-academy-xxxx.onrender.com` - that's the link to share/bookmark.
 
-...and put it behind a domain/HTTPS (e.g. via Nginx + Let's Encrypt, or a PaaS such as
-Render/Railway/PythonAnywhere). Once deployed, any phone with a browser can use it -
-no native app installation is required.
+**Important - data persistence:** the default setup uses a local SQLite file. On
+Render's free plan the filesystem is not guaranteed to survive every restart/redeploy,
+which is fine for trying it out but risky for real fee/attendance records. For real use,
+either:
+- attach a Render **persistent disk** to the service and point `DATABASE_URL` at a file
+  on it (small paid add-on), or
+- create a Render **PostgreSQL** database and set the service's `DATABASE_URL` to its
+  connection string - the app already supports Postgres (`psycopg2-binary` is in
+  `requirements.txt` and `postgres://` URLs are normalized automatically), no code
+  changes needed.
+
+Alternatives that also work well for a small tuition centre: **PythonAnywhere**'s free
+tier (persistent disk, manual setup via their dashboard - no blueprint automation) or
+any VPS behind Nginx + Let's Encrypt for HTTPS. Once deployed, any phone with a browser
+can use it - no native app installation is required.
 
 ## Project structure
 

@@ -1,0 +1,30 @@
+# Render Blueprint - https://render.com/docs/blueprint-spec
+# Deploys the Brainwave Academy app from the brainwave_academy/ subfolder.
+# On render.com: New + -> Blueprint -> connect this repo -> pick this branch -> Apply.
+services:
+  - type: web
+    name: brainwave-academy
+    runtime: python
+    rootDir: brainwave_academy
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn run:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEFAULT_ADMIN_USERNAME
+        value: admin
+      - key: DEFAULT_ADMIN_PASSWORD
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_WHATSAPP_FROM
+        sync: false
+      - key: DEFAULT_COUNTRY_CODE
+        value: "91"

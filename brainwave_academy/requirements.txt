@@ -6,3 +6,5 @@ email-validator==2.1.1
 Werkzeug==3.0.3
 python-dotenv==1.0.1
 twilio==9.2.3
+gunicorn==22.0.0
+psycopg2-binary==2.9.9

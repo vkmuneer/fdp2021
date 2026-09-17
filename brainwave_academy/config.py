@@ -4,16 +4,24 @@ from datetime import timedelta
 basedir = os.path.abspath(os.path.dirname(__file__))
 
 
+def _database_uri():
+    # Render/Heroku-style hosts sometimes inject an empty DATABASE_URL env var
+    # (rather than omitting it) and use the legacy "postgres://" scheme, which
+    # SQLAlchemy 1.4+ rejects, so normalize both cases here.
+    uri = os.environ.get("DATABASE_URL") or f"sqlite:///{os.path.join(basedir, 'brainwave.db')}"
+    if uri.startswith("postgres://"):
+        uri = uri.replace("postgres://", "postgresql://", 1)
+    return uri
+
+
 class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-key-change-me")
-    SQLALCHEMY_DATABASE_URI = os.environ.get(
-        "DATABASE_URL", f"sqlite:///{os.path.join(basedir, 'brainwave.db')}"
-    )
+    SQLALCHEMY_DATABASE_URI = _database_uri()
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     PERMANENT_SESSION_LIFETIME = timedelta(days=7)
 
-    DEFAULT_ADMIN_USERNAME = os.environ.get("DEFAULT_ADMIN_USERNAME", "admin")
-    DEFAULT_ADMIN_PASSWORD = os.environ.get("DEFAULT_ADMIN_PASSWORD", "admin123")
+    DEFAULT_ADMIN_USERNAME = os.environ.get("DEFAULT_ADMIN_USERNAME") or "admin"
+    DEFAULT_ADMIN_PASSWORD = os.environ.get("DEFAULT_ADMIN_PASSWORD") or "admin123"
 
     TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID", "")
     TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN", "")
