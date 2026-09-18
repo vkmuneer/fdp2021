@@ -72,21 +72,38 @@ can even "Add to Home Screen" on a phone for an app-like icon).
   in `style.css` (`--bw-teal`, `--bw-blue`, `--bw-dark-teal`) can be tuned to match it
   exactly.
 
-## Getting started
+## Getting started (double-click launcher)
+
+The only thing you need to install first is **Python 3.11 or later**
+(python.org/downloads - on Windows, tick "Add python.exe to PATH" during install).
+Everything else is handled automatically by a launcher script:
+
+- **Windows:** double-click `start.bat`
+- **Mac/Linux:** open a terminal in the `brainwave_academy` folder and run `./start.sh`
+
+The first run takes a few minutes (it creates a private Python environment and installs
+the app's dependencies); every run after that starts in a couple of seconds. Your browser
+opens automatically to `http://localhost:5000`. Keep the black terminal window open while
+you use the app - closing it stops the server; run the script again any time to restart.
+
+The database (SQLite file `brainwave.db`) and a default admin account (`admin` /
+`admin123`) plus the four classes are created automatically the first time it runs.
+**Log in and change the admin password immediately** (top-right menu -> your name ->
+Change Password) - or better, edit the `.env` file the script creates and set
+`DEFAULT_ADMIN_PASSWORD` to something real before your first login.
+
+To use it from a phone on the same Wi-Fi, find this computer's local IP address (e.g.
+`192.168.1.23`) and open `http://192.168.1.23:5000` on the phone instead of `localhost`.
+
+### Manual setup (if you'd rather run the commands yourself)
 
 ```bash
 cd brainwave_academy
-python3 -m venv .venv && source .venv/bin/activate
+python3 -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 cp .env.example .env   # then edit .env: set a real SECRET_KEY and admin password
 python run.py
 ```
-
-Open `http://localhost:5000` in a browser (or `http://<your-computer-ip>:5000` from a
-phone on the same Wi-Fi). The database (SQLite file `brainwave.db`) and a default admin
-account (`admin` / `admin123`, or whatever you set in `.env`) plus the four classes are
-created automatically the first time the app runs. **Log in and change the admin
-password immediately** (top-right menu -> your name -> Change Password).
 
 ### Setting up teachers and students
 
