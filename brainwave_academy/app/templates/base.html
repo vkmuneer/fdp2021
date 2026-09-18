@@ -54,6 +54,11 @@
         <li class="nav-item"><a class="nav-link" href="{{ url_for('teacher.exams') }}"><i class="bi bi-journal-text"></i> Examinations</a></li>
         {% endif %}
       </ul>
+      <form class="d-flex mx-md-2 my-2 my-md-0" method="get"
+            action="{{ url_for('admin.search') if current_user.is_admin else url_for('teacher.search') }}">
+        <input type="search" name="q" class="form-control form-control-sm" placeholder="Search students..." style="min-width: 200px;">
+        <button class="btn btn-sm btn-light ms-1" type="submit"><i class="bi bi-search"></i></button>
+      </form>
       <ul class="navbar-nav">
         {% if current_user.is_admin %}
         <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.settings') }}"><i class="bi bi-gear"></i> Settings</a></li>

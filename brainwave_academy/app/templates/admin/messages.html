@@ -9,6 +9,15 @@
 </div>
 {% endif %}
 
+<form method="get" class="row g-2 mb-3">
+  <div class="col-8 col-md-3">
+    <input type="text" name="q" class="form-control" placeholder="Search name, admission no. or phone" value="{{ q }}">
+  </div>
+  <div class="col-4 col-md-2">
+    <button class="btn btn-outline-secondary w-100" type="submit">Search</button>
+  </div>
+</form>
+
 <div class="d-md-none">
   {% for log in logs %}
   <div class="card bw-card mb-2">

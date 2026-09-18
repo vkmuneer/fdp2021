@@ -88,9 +88,15 @@
 </div>
 
 <div class="card bw-card">
-  <div class="card-header bg-white fw-bold text-bw-teal">Student Ranking</div>
+  <div class="card-header bg-white">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <strong class="text-bw-teal">Student Ranking</strong>
+      <input type="text" id="rankFilter" class="form-control form-control-sm no-print" style="max-width: 240px;"
+             placeholder="Filter by name or admission no." onkeyup="filterRankTable()">
+    </div>
+  </div>
   <div class="table-responsive">
-    <table class="table mb-0 align-middle">
+    <table class="table mb-0 align-middle" id="rankTable">
       <thead>
         <tr>
           <th>Rank</th><th>Admission No.</th><th>Name</th>
@@ -126,4 +132,15 @@
     </table>
   </div>
 </div>
+
+<script>
+function filterRankTable() {
+  const q = document.getElementById('rankFilter').value.trim().toLowerCase();
+  document.querySelectorAll('#rankTable tbody tr').forEach(function (row) {
+    const name = (row.children[2] ? row.children[2].textContent : '').toLowerCase();
+    const admissionNo = (row.children[1] ? row.children[1].textContent : '').toLowerCase();
+    row.style.display = (!q || name.includes(q) || admissionNo.includes(q)) ? '' : 'none';
+  });
+}
+</script>
 {% endblock %}

@@ -110,6 +110,31 @@ def dashboard():
     )
 
 
+# ------------------------------------------------------------------ search
+@admin_bp.route("/search")
+@login_required
+@admin_required
+def search():
+    q = request.args.get("q", "").strip()
+    results = []
+    if q:
+        like = f"%{q}%"
+        results = (
+            Student.query.filter(
+                Student.active == True,  # noqa: E712
+                db.or_(
+                    Student.name.ilike(like),
+                    Student.admission_no.ilike(like),
+                    Student.parent_name.ilike(like),
+                    Student.parent_whatsapp.ilike(like),
+                ),
+            )
+            .order_by(Student.name)
+            .all()
+        )
+    return render_template("admin/search_results.html", q=q, results=results)
+
+
 # ----------------------------------------------------------------- students
 @admin_bp.route("/students")
 @login_required
@@ -449,11 +474,16 @@ def _compute_finance_report(args):
         year, month = start.year, start.month
         label = start.strftime("%d-%m-%Y")
 
-    payments = (
-        FeePayment.query.filter(FeePayment.payment_date >= start, FeePayment.payment_date <= end)
-        .order_by(FeePayment.payment_date, FeePayment.created_at)
-        .all()
+    q = args.get("q", "").strip()
+    payments_query = FeePayment.query.filter(
+        FeePayment.payment_date >= start, FeePayment.payment_date <= end
     )
+    if q:
+        like = f"%{q}%"
+        payments_query = payments_query.join(Student).filter(
+            db.or_(Student.name.ilike(like), Student.admission_no.ilike(like))
+        )
+    payments = payments_query.order_by(FeePayment.payment_date, FeePayment.created_at).all()
     total = sum(p.amount for p in payments)
 
     by_mode = {}
@@ -470,6 +500,7 @@ def _compute_finance_report(args):
         "label": label,
         "year": year,
         "month": month,
+        "q": q,
         "payments": payments,
         "total": total,
         "by_mode": by_mode,
@@ -675,26 +706,31 @@ def student_wise_report_pdf():
 
 def _compute_pending_fees_report(args):
     class_id = args.get("class_id", type=int)
+    q = args.get("q", "").strip()
     query = Student.query.filter_by(active=True)
     if class_id:
         query = query.filter_by(class_id=class_id)
+    if q:
+        like = f"%{q}%"
+        query = query.filter(db.or_(Student.name.ilike(like), Student.admission_no.ilike(like)))
 
     student_list = [s for s in query.all() if s.pending_fee > 0]
     student_list.sort(key=lambda s: s.pending_fee, reverse=True)
     total_pending = sum(s.pending_fee for s in student_list)
-    return student_list, class_id, total_pending
+    return student_list, class_id, q, total_pending
 
 
 @admin_bp.route("/reports/pending-fees")
 @login_required
 @admin_required
 def pending_fees_report():
-    student_list, class_id, total_pending = _compute_pending_fees_report(request.args)
+    student_list, class_id, q, total_pending = _compute_pending_fees_report(request.args)
     return render_template(
         "admin/pending_fees.html",
         students=student_list,
         classes=_classes_sorted(),
         selected_class_id=class_id,
+        q=q,
         total_pending=total_pending,
     )
 
@@ -703,7 +739,7 @@ def pending_fees_report():
 @login_required
 @admin_required
 def pending_fees_report_pdf():
-    student_list, class_id, total_pending = _compute_pending_fees_report(request.args)
+    student_list, class_id, q, total_pending = _compute_pending_fees_report(request.args)
     columns = ["Admission No.", "Name", "Class", "Parent WhatsApp", "Total Fee", "Paid", "Pending"]
     rows = [
         [
@@ -843,9 +879,16 @@ def attendance_report():
 @login_required
 @admin_required
 def messages():
-    logs = MessageLog.query.order_by(MessageLog.created_at.desc()).limit(200).all()
+    q = request.args.get("q", "").strip()
+    query = MessageLog.query.order_by(MessageLog.created_at.desc())
+    if q:
+        like = f"%{q}%"
+        query = query.join(Student).filter(
+            db.or_(Student.name.ilike(like), Student.admission_no.ilike(like), MessageLog.phone.ilike(like))
+        )
+    logs = query.limit(200).all()
     pending_count = MessageLog.query.filter_by(status="manual").count()
-    return render_template("admin/messages.html", logs=logs, pending_count=pending_count)
+    return render_template("admin/messages.html", logs=logs, pending_count=pending_count, q=q)
 
 
 @admin_bp.route("/messages/<int:message_id>/mark-sent", methods=["POST"])

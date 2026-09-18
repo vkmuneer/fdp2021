@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Search{% endblock %}
+{% block content %}
+<h4 class="text-bw-teal mb-3"><i class="bi bi-search"></i> Search</h4>
+
+<form method="get" class="row g-2 mb-3">
+  <div class="col-8 col-md-4">
+    <input type="search" name="q" class="form-control" placeholder="Name, admission no., parent name or WhatsApp number"
+           value="{{ q }}" autofocus>
+  </div>
+  <div class="col-4 col-md-2">
+    <button class="btn btn-bw-primary w-100" type="submit">Search</button>
+  </div>
+</form>
+
+{% if q %}
+<p class="text-muted">{{ results|length }} result(s) for "{{ q }}"</p>
+
+<div class="d-md-none">
+  {% for s in results %}
+  <a href="{{ url_for('admin.student_detail', student_id=s.id) }}" class="text-decoration-none text-dark">
+    <div class="card bw-card mb-2">
+      <div class="card-body py-2 px-3 d-flex justify-content-between align-items-center">
+        <div>
+          <div class="fw-bold">{{ s.name }}</div>
+          <div class="small text-muted">{{ s.admission_no }} &middot; {{ s.school_class.name }}-{{ s.division.name }} &middot; {{ s.parent_whatsapp }}</div>
+        </div>
+        <span class="badge {{ 'badge-paid' if s.payment_status == 'Paid' else ('badge-partial' if s.payment_status == 'Partial' else 'badge-unpaid') }}">
+          {{ s.payment_status }}
+        </span>
+      </div>
+    </div>
+  </a>
+  {% else %}
+  <p class="text-muted">No students matched.</p>
+  {% endfor %}
+</div>
+
+<div class="d-none d-md-block card bw-card">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0 align-middle">
+      <thead>
+        <tr><th>Admission No.</th><th>Name</th><th>Class</th><th>Parent</th><th>WhatsApp</th><th>Pending Fee</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for s in results %}
+        <tr>
+          <td>{{ s.admission_no }}</td>
+          <td><a href="{{ url_for('admin.student_detail', student_id=s.id) }}">{{ s.name }}</a></td>
+          <td>{{ s.school_class.name }}-{{ s.division.name }}</td>
+          <td>{{ s.parent_name or '-' }}</td>
+          <td>{{ s.parent_whatsapp }}</td>
+          <td>₹{{ "{:,.0f}".format(s.pending_fee) }}</td>
+          <td><span class="badge {{ 'badge-paid' if s.payment_status == 'Paid' else ('badge-partial' if s.payment_status == 'Partial' else 'badge-unpaid') }}">{{ s.payment_status }}</span></td>
+          <td>
+            <a href="{{ url_for('admin.student_detail', student_id=s.id) }}" class="btn btn-sm btn-outline-secondary">View</a>
+            <a href="{{ url_for('admin.student_statement_pdf', student_id=s.id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-file-earmark-pdf"></i></a>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" class="text-muted text-center">No students matched.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<p class="text-muted">Search by student name, admission number, parent name, or parent WhatsApp number.</p>
+{% endif %}
+{% endblock %}

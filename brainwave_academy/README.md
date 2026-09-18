@@ -8,6 +8,10 @@ can even "Add to Home Screen" on a phone for an app-like icon).
 ## Features
 
 - **Admin login** and **Teacher login** with role-based access.
+- **Search everywhere** - a search box in the top menu (Students search for admin, scoped
+  to their own students for teachers) finds a student by name, admission number, parent
+  name, or parent WhatsApp number. The Pending Fees, Fee Collection and Messages reports
+  also have their own search/filter box, and exam ranking tables have a live filter.
 - **Student management** - admission details, class & division, parent name/WhatsApp
   number, address, place and the school the student currently studies in (both picked
   from an admin-managed master list - see **Master Data** below), and discount/scholarship
@@ -61,8 +65,10 @@ can even "Add to Home Screen" on a phone for an app-like icon).
   report**, a **PDF report card per student**, or an **Excel export** of the full marks
   grid.
 - **Brainwave Academy branding** - the app uses the academy's teal-to-blue gradient
-  colour theme throughout (`app/static/img/logo.svg`, `app/static/css/style.css`).
-  Replace `logo.svg` with the exact official logo file at any time; the color variables
+  colour theme throughout (`app/static/img/logo.svg` for the web UI, `app/static/img/logo.png`
+  for downloadable PDFs) and shows the logo on every page header and on every generated
+  PDF report/receipt. Replace both files with the exact official logo whenever you have
+  it (PDF generation needs a raster PNG/JPG - it can't render SVG); the color variables
   in `style.css` (`--bw-teal`, `--bw-blue`, `--bw-dark-teal`) can be tuned to match it
   exactly.
 

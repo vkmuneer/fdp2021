@@ -65,6 +65,18 @@
 </form>
 {% endif %}
 
+<form method="get" class="row g-2 mb-2">
+  {% for key, value in request.args.items() %}
+    {% if key != 'q' %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endif %}
+  {% endfor %}
+  <div class="col-8 col-md-3">
+    <input type="text" name="q" class="form-control" placeholder="Search student name or admission no." value="{{ q }}">
+  </div>
+  <div class="col-4 col-md-2">
+    <button class="btn btn-outline-secondary w-100" type="submit">Search</button>
+  </div>
+</form>
+
 <div class="mb-2 text-muted">Showing: <strong>{{ label }}</strong></div>
 
 <div class="row g-3 mb-3">

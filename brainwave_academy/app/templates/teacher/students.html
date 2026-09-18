@@ -14,10 +14,14 @@
   </div>
 </form>
 
+{% if students %}
+<input type="text" id="studentFilter" class="form-control mb-3" placeholder="Filter by name or admission no." onkeyup="filterStudentList()">
+{% endif %}
+
 <div class="card bw-card">
-  <ul class="list-group list-group-flush">
+  <ul class="list-group list-group-flush" id="studentList">
     {% for s in students %}
-    <li class="list-group-item">
+    <li class="list-group-item" data-name="{{ s.name|lower }}" data-admission="{{ s.admission_no|lower }}">
       <div class="fw-bold">{{ s.name }}</div>
       <div class="small text-muted">{{ s.admission_no }} &middot; Parent: {{ s.parent_name or '-' }} &middot; {{ s.parent_whatsapp }}</div>
     </li>
@@ -26,6 +30,16 @@
     {% endfor %}
   </ul>
 </div>
+
+<script>
+function filterStudentList() {
+  const q = document.getElementById('studentFilter').value.trim().toLowerCase();
+  document.querySelectorAll('#studentList li[data-name]').forEach(function (li) {
+    const matches = !q || li.dataset.name.includes(q) || li.dataset.admission.includes(q);
+    li.style.display = matches ? '' : 'none';
+  });
+}
+</script>
 {% else %}
 <p class="text-muted">You have not been assigned to any class yet. Please contact the admin.</p>
 {% endif %}

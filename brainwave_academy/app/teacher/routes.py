@@ -30,6 +30,32 @@ def _pdf_response(template_name, filename, **context):
     return send_file(buffer, mimetype="application/pdf", as_attachment=True, download_name=filename)
 
 
+@teacher_bp.route("/search")
+@login_required
+@teacher_required
+def search():
+    q = request.args.get("q", "").strip()
+    division_ids = [d.id for d in current_user.teacher.divisions]
+    results = []
+    if q and division_ids:
+        like = f"%{q}%"
+        results = (
+            Student.query.filter(
+                Student.active == True,  # noqa: E712
+                Student.division_id.in_(division_ids),
+                db.or_(
+                    Student.name.ilike(like),
+                    Student.admission_no.ilike(like),
+                    Student.parent_name.ilike(like),
+                    Student.parent_whatsapp.ilike(like),
+                ),
+            )
+            .order_by(Student.name)
+            .all()
+        )
+    return render_template("teacher/search_results.html", q=q, results=results)
+
+
 @teacher_bp.route("/dashboard")
 @login_required
 @teacher_required

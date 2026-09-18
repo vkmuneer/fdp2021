@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Search{% endblock %}
+{% block content %}
+<h4 class="text-bw-teal mb-3"><i class="bi bi-search"></i> Search My Students</h4>
+
+<form method="get" class="row g-2 mb-3">
+  <div class="col-8 col-md-4">
+    <input type="search" name="q" class="form-control" placeholder="Name, admission no. or parent WhatsApp"
+           value="{{ q }}" autofocus>
+  </div>
+  <div class="col-4 col-md-2">
+    <button class="btn btn-bw-primary w-100" type="submit">Search</button>
+  </div>
+</form>
+
+{% if q %}
+<p class="text-muted">{{ results|length }} result(s) for "{{ q }}"</p>
+<div class="card bw-card">
+  <ul class="list-group list-group-flush">
+    {% for s in results %}
+    <li class="list-group-item">
+      <div class="fw-bold">{{ s.name }}</div>
+      <div class="small text-muted">{{ s.admission_no }} &middot; {{ s.school_class.name }}-{{ s.division.name }} &middot; Parent: {{ s.parent_name or '-' }} &middot; {{ s.parent_whatsapp }}</div>
+    </li>
+    {% else %}
+    <li class="list-group-item text-muted">No students matched.</li>
+    {% endfor %}
+  </ul>
+</div>
+{% else %}
+<p class="text-muted">Search your own students by name, admission number, or parent WhatsApp number.</p>
+{% endif %}
+{% endblock %}

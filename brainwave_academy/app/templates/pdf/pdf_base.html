@@ -24,6 +24,7 @@
 </head>
 <body>
   <div class="header">
+    {% if logo_data_uri %}<img src="{{ logo_data_uri }}" style="width: 56px; height: 56px;">{% endif %}
     <h1>{{ (settings.academy_name if settings else None) or "Brainwave Academy" }}</h1>
     <div class="sub">{% block report_title %}Report{% endblock %}</div>
     <div class="sub">Generated on {{ today.strftime('%d-%m-%Y') }}</div>
